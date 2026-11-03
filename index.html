@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>별자리 달력 관측소</title>
+<meta name="description" content="지구의 공전과 태양의 연주 운동, 계절별 별자리 변화를 3D 모형으로 관찰하고 예측하는 수업 자료">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b1a; --panel:#111934; --line:#2a3768;
+  --text:#eef2ff; --muted:#a9b4d8; --accent:#ffcf5a; --accent2:#7cc4ff;
+  --ok:#5fe0a0; --bad:#ff8a8a; --chip:#1f2b5a; --chiph:#2b3a78;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6;min-height:100vh;-webkit-tap-highlight-color:transparent}
+#app{max-width:1280px;margin:0 auto;padding:14px 16px 60px}
+h1,h2,h3,.title{font-family:"Do Hyeon","Noto Sans KR",sans-serif;font-weight:400;letter-spacing:.5px;margin:0}
+h1{font-size:clamp(36px,6vw,58px);line-height:1.15}
+h3{font-size:22px;margin-bottom:6px}
+p{margin:.4em 0}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:var(--accent);color:#1b1400;border:0;border-radius:999px;padding:12px 24px;font-weight:700;font-size:17px}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line)}
+.btn.small{padding:7px 14px;font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.muted{color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+input{font:inherit;color:var(--text);background:#0b1230;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus{outline:2px solid var(--accent2);border-color:transparent}
+label{display:block;font-weight:700;margin:10px 0 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.top .grow{flex:1}
+.pill{background:var(--chip);border-radius:999px;padding:5px 12px;font-size:14px;color:var(--muted)}
+.pill b{color:var(--text)}
+
+.intro{display:grid;grid-template-columns:1.3fr 1fr;gap:22px;align-items:center;min-height:88vh}
+.intro>*{min-width:0}
+.intro-r{display:flex;flex-direction:column;gap:12px}
+.kicker{color:var(--accent2);font-weight:700;margin:0;font-size:14px}
+.lead{font-size:18px}
+.lead b{color:var(--accent)}
+@media (max-width:920px){.intro{grid-template-columns:1fr;min-height:auto}}
+
+/* 3D 화면 */
+.stage{position:relative;width:100%;height:min(66vh,640px);min-height:320px;border-radius:var(--r);overflow:hidden;background:#050914;border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none}
+@media (max-width:920px){.stage{height:min(56vh,540px)}}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage canvas.ov{pointer-events:none}
+.stage .hud{position:absolute;left:10px;top:10px;right:10px;pointer-events:none;font-size:15px;font-weight:700;line-height:1.4}
+.stage .hud span{display:inline-block;background:#08102ecc;border:1px solid #ffffff26;border-radius:12px;padding:5px 12px}
+.stage .hud span:empty{display:none}
+.stage .nogl{display:flex;align-items:center;justify-content:center;height:100%;padding:20px;text-align:center;color:var(--muted)}
+
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.group{display:flex;gap:3px;flex-wrap:wrap;align-items:center;background:#0b1230;border:1px solid var(--line);border-radius:999px;padding:3px}
+.group .lbl{font-size:13px;color:var(--muted);padding:0 6px 0 10px}
+.chip{background:var(--chip);border:1.5px solid transparent;border-radius:999px;padding:6px 14px;font-size:15px;min-height:40px}
+.chip:hover{background:var(--chiph)}
+.chip.on{background:var(--accent2);color:#06142b;font-weight:700}
+.chip.big{font-weight:700;padding:6px 20px}
+.chip.play{background:var(--accent);color:#1b1400;font-weight:700}
+.group .chip{min-height:36px;padding:4px 12px}
+.group.months .chip{min-width:46px;padding:4px 8px}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:var(--chip);border:1.5px solid transparent;border-radius:12px;padding:8px 14px;font-weight:700;font-size:15px}
+.tab.on{border-color:var(--accent);color:var(--accent);background:var(--chiph)}
+.lesson{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:14px;align-items:start}
+.lesson>*{min-width:0}
+@media (max-width:920px){.lesson{grid-template-columns:1fr}}
+.concept ol{padding-left:22px;margin:8px 0}
+.concept li{margin:10px 0;font-size:17px;line-height:2}
+.blank{display:inline-block;min-width:54px;text-align:center;border:0;border-bottom:2.5px solid var(--accent);background:#ffcf5a14;color:var(--accent);padding:0 8px;margin:0 2px;font-weight:700;border-radius:6px 6px 0 0;line-height:1.6}
+button.blank:not(.show){color:transparent}
+.blank.ok{border-color:var(--ok);color:var(--ok)}
+/* 수업 모드: TV로 함께 보도록 3D 화면을 크게, 정리 카드는 아래에 큰 글씨로 */
+.cl-stage .stage{height:max(420px,calc(100vh - 200px))}
+.cl-stage .chip{font-size:17px;min-height:46px}
+.cl-stage .group .chip{min-height:42px}
+.concept.big{margin-top:16px}
+.concept.big h3{font-size:clamp(24px,2.6vw,34px)}
+.concept.big li{font-size:clamp(22px,2.4vw,32px);margin:12px 0}
+.concept.big .ask{font-size:clamp(19px,1.9vw,26px)}
+.ask{background:#1c2a5c;border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:15px}
+.ask b{color:var(--accent)}
+
+.mcards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:700px){.mcards{grid-template-columns:1fr}}
+.mcard{display:flex;flex-direction:column;gap:8px}
+.mcard .n{font-family:"Do Hyeon";color:var(--accent);font-size:15px}
+.mcard.lock{opacity:.5}
+.mcard .row{margin-top:auto}
+.st-done{color:var(--ok);font-weight:700}
+.check{list-style:none;padding:0;margin:6px 0 12px}
+.check li{padding:3px 0}
+.check li.ok{color:var(--ok)}
+.q{border-top:1px solid var(--line);padding:12px 0}
+.q:first-of-type{border-top:0}
+.q.locked{opacity:.4}
+.q .s{font-size:17px}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.opt{background:var(--chip);border:1.5px solid var(--line);border-radius:999px;padding:7px 16px;font-size:15px}
+.opt:hover{background:var(--chiph)}
+.opt:disabled{cursor:default}
+.opt.no{opacity:.35;text-decoration:line-through;pointer-events:none}
+.opt.sel{background:var(--accent);color:#1b1400;border-color:var(--accent);opacity:1}
+.opts.zod .opt{padding:5px 10px;font-size:14px}
+.fb{font-size:15px;margin-top:6px}
+.fb.ok{color:var(--ok)}
+.fb.bad{color:var(--bad)}
+.fb.ex{color:var(--text);background:#16224a;border-radius:8px;padding:6px 10px}
+.done{background:#173a2c;border:1px solid var(--ok);border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.done b{flex:1;min-width:160px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.stp{background:var(--chip);border:1.5px solid transparent;border-radius:999px;padding:5px 12px;font-size:14px}
+.stp.on{border-color:var(--accent);color:var(--accent)}
+.stp.ok::after{content:" ✓";color:var(--ok)}
+.quiz{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.quiz>*{min-width:0}
+@media (max-width:820px){.quiz{grid-template-columns:1fr}}
+.quiz .q{border-top:0;padding:0}
+svg.fig{width:100%;max-height:250px;border-radius:10px;background:#0b1230;display:block;margin-bottom:10px}
+svg.fig.sq{max-height:440px}
+.score{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:16px;margin:10px 0}
+.score dt{color:var(--muted)}
+.score dd{margin:0;font-weight:700}
+details.tip{background:#13204a;border:1px solid #3d5bb0;border-radius:12px;padding:10px 14px;margin:10px 0}
+details.tip summary{cursor:pointer;font-weight:700;color:var(--accent);font-size:16px}
+details.tip ol{margin:8px 0 0 20px;padding:0}details.tip li{margin:5px 0}
+.ztbl{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px;font-size:13px;text-align:center}
+.ztbl span{background:#0b1230;border-radius:6px;padding:4px 2px}.ztbl b{display:block;color:#ffd9a8;font-size:12px}
+.boxq{background:#0b1230;border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+
+.tstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.tstats div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;color:var(--muted)}
+.tstats b{display:block;font-family:"Do Hyeon";font-size:28px;color:var(--text)}
+.tbl-wrap{overflow-x:auto}
+.ttbl{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap}
+.ttbl th,.ttbl td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left}
+.ttbl th{color:var(--muted);font-weight:500}
+.tok{color:var(--ok);font-weight:700}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+'use strict';
+/* ───────── 설정 ─────────
+   SUBMIT_URL: 태양계 탐사대·일주운동과 같은 Apps Script 주소. 결과는 같은 구글 시트의 '연주운동 현황' 탭에 모여요. */
+const CONFIG = {
+  SUBMIT_URL: 'https://script.google.com/macros/s/AKfycbwgcIJOTfz5PJHlA4DWjsth69Wyt_SMK7ea1NpXJUUEUCmBmyYRkA0Vpjh5du_2SHI/exec',
+  LESSON: '연주운동'
+};
+const D2R = Math.PI / 180;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ───────── 황도 12궁 ─────────
+   교과서처럼 '그 달에 태양이 지나는 별자리'로 정리했어요. (1월 궁수자리 … 12월 전갈자리)
+   한밤중에 남쪽 하늘에서 보이는 별자리는 6개월 뒤의 별자리(태양 반대쪽)예요. */
+const ZOD = ['궁수자리', '염소자리', '물병자리', '물고기자리', '양자리', '황소자리', '쌍둥이자리', '게자리', '사자자리', '처녀자리', '천칭자리', '전갈자리'];
+const sunZ = m => ZOD[(m - 1 + 1200) % 12];      // m월에 태양이 지나는 별자리
+const nightZ = m => ZOD[(m + 5 + 1200) % 12];    // m월 한밤중 남쪽 하늘의 별자리
+// 별자리 띠 위의 단순한 모양: [가로(도), 높이] 점을 이은 선들. 실제 모양과 똑같지는 않아요.
+const ZSH = [
+  [[[-6, -.4], [-3, -.8], [0, -.6], [3, -.9], [5, -.2], [2, .4], [-1, .6], [-4, .3], [-6, -.4]], [[2, .4], [3, 1.1]]],
+  [[[-6, .6], [-3, .1], [0, -.7], [3, -.3], [6, .7], [2, .9], [-6, .6]]],
+  [[[-6, .9], [-3, .5], [-1, .8], [1, .1], [3, -.4], [5, -.9]], [[1, .1], [2, .8]]],
+  [[[-7, .8], [-5, .4], [-2, 0], [1, -.5], [4, -.2], [6, .3]], [[6, .3], [7, .9], [5, 1], [6, .3]]],
+  [[[-4, .3], [-1, .6], [2, .4], [4, -.3]]],
+  [[[-6, 1], [-3, .3], [0, 0], [2, -.2], [5, -.8]], [[0, 0], [1, .9], [3, 1.2]]],
+  [[[-4, 1], [-4, -1]], [[1, 1.1], [1, -1]], [[-4, 1], [1, 1.1]], [[-4, 0], [-2, 0]]],
+  [[[-2, .8], [0, .1], [2, .9]], [[0, .1], [0, -.9]]],
+  [[[-6, -.6], [-3, -.4], [0, -.5], [1, .2], [0, .9], [-2, 1.1]], [[-6, -.6], [-4, .2], [-3, -.4]]],
+  [[[-7, .2], [-4, .5], [-1, 0], [2, -.4], [5, -.2], [7, .5]], [[-1, 0], [0, -1]]],
+  [[[-3, 1], [0, .4], [3, 1]], [[-3, 1], [-3, -.4]], [[3, 1], [3, -.2]]],
+  [[[-6, .9], [-4, .6], [-2, .1], [0, -.4], [2, -.9], [4, -.8], [5, -.3]], [[-6, .9], [-7, .3]], [[-6, .9], [-6, 1.4]]]
+];
+
+/* ───────── 지구 지도 (경도, 위도) — 1차시와 같은 단순한 대륙 그림 ───────── */
+const LAND = [
+  [[-9,37],[-9,43],[-2,43.5],[-4.5,48],[-1,49.5],[2,51],[5,53],[8,54],[8,57],[10,59],[5,62],[10,64],[15,68],[20,70],[28,71],[33,69],[41,67],[44,68],[53,68],[60,69],[68,72],[73,72],[80,73],[90,75],[100,77],[112,74],[125,73],[140,72],[150,71],[160,70],[170,70],[180,68.5],[180,65],[178,62],[170,60],[163,58],[162,54],[157,51],[156,57],[150,59],[143,59],[137,54],[141,52],[140,48],[135,43],[132,43],[130,42],[129.5,40],[128,38.5],[129,35.5],[127,34.5],[126,35],[126.5,37.5],[125,39.5],[122,40],[121,39],[122,37],[119,35],[121,32],[122,30],[120,26],[117,23.5],[113,22],[110,21.5],[108,21.5],[106,18],[109,12],[105,8.6],[102.5,12],[100,13.5],[100,9],[103,5],[104,1.4],[101,3],[99,8],[98,15],[97,17],[94,19],[91.5,22.5],[88,22],[87,21],[85,19.5],[80,15],[80,10],[77.5,8],[76,10],[73,16],[72.6,21],[70,22.5],[67,24.5],[62,25],[57,25.7],[56.3,27],[54,26.7],[50.5,30],[48,30],[50,26],[51.5,24],[54,24],[56,26],[57.5,23.5],[59.5,22.5],[57,18.9],[52,16],[48,14],[44,12.7],[43,14],[42.5,16.5],[39,21.5],[35,28],[34.5,29.5],[34,31],[35,32.5],[36,35],[36,36.7],[32,36.2],[28,36.7],[26.3,38.3],[26,40],[23,40.5],[22.5,37],[21,38.5],[19.5,40.5],[19,42],[16,43.5],[13.5,45.5],[12.3,44.5],[14,42],[16,40],[16.5,38],[15.6,38],[14,40.5],[12,42],[10.5,43.8],[9,44.4],[7.5,43.8],[4,43.4],[3,42],[0.7,40.7],[0,38.8],[-0.7,37.6],[-2,36.7],[-5.4,36.1],[-6.3,36.8],[-7.4,37.2]],
+  [[-17,21],[-16.5,24],[-13,27.5],[-9.8,30],[-9.3,32.5],[-6.8,34],[-5.9,35.8],[-2,35.1],[1,36.5],[5,36.8],[10,37.2],[11,35.5],[10,34],[11.2,33.2],[15,32.3],[19,30.3],[20,31.8],[23,32.6],[25,31.8],[29,30.9],[32,31.3],[34.2,31.2],[34.5,28],[33,28],[35.5,24],[37,21],[38.5,18],[40,15.5],[43.3,12.6],[44,10.5],[51.2,11.8],[51,10.4],[48,5],[44,1],[41.5,-1.7],[40,-3.5],[39,-6.5],[39.5,-10],[40.5,-15],[37,-17.8],[35.4,-21.5],[35.5,-24],[32.7,-26],[32.5,-29],[30,-31.3],[27,-33.6],[22,-34],[20,-34.8],[18.4,-34],[17.8,-31],[15,-26.6],[14.5,-22.5],[11.8,-17.3],[13.6,-12],[13.2,-9],[12.2,-6],[9,-1],[9.5,2.5],[8.5,4.5],[6,4.3],[4.5,6.3],[1.5,6.1],[-2,4.8],[-7.5,4.4],[-10.5,6.5],[-13,8],[-13.4,9.5],[-15,11],[-16.7,12.5],[-17.4,14.7],[-16.5,16],[-16.2,19.5]],
+  [[-168,65.5],[-163,67],[-166,68.8],[-156,71.3],[-141,69.7],[-128,70],[-115,68.5],[-100,68],[-94,71.8],[-86,68.5],[-81,69.5],[-75,68],[-67,63],[-64,60],[-61,56],[-56,52],[-60,50],[-66,49],[-64,47],[-61,45],[-66,44],[-70,41.6],[-74,40.5],[-76,37],[-75.5,35.3],[-78.5,33.8],[-81,31.5],[-80,27],[-80.4,25.2],[-81.8,26.5],[-83,29],[-85,29.8],[-89,30.3],[-90,29],[-94,29.6],[-97.2,27.5],[-97.5,25],[-97.8,22],[-96.5,19.3],[-94.5,18.2],[-91,18.8],[-90.4,21],[-87,21.5],[-87.6,18],[-88.3,16],[-84,15.8],[-83.5,11],[-81.8,9],[-79.5,9.5],[-77.4,8.7],[-77.3,7.8],[-78.5,7.5],[-80.4,7.3],[-81.5,7.8],[-85.7,10.2],[-87.5,12.9],[-91.4,13.9],[-94,16],[-96.5,15.7],[-101,17.5],[-105.5,20.5],[-105.3,23.2],[-109.5,26.7],[-112.3,29.5],[-114.7,31.6],[-117.1,32.5],[-120.6,34.6],[-122.5,37.5],[-124,40.4],[-124.5,43],[-124,46.2],[-124.7,48.4],[-127.5,50.5],[-130,54],[-133,57.5],[-137.5,58.8],[-141,60],[-147,60.8],[-151.5,59.2],[-154,57],[-158,56.6],[-162,55],[-158,58.6],[-162,59.9],[-165,62],[-164.7,63.2],[-161,64.3],[-166,64.6]],
+  [[-77.3,8.6],[-75.5,10.6],[-71.3,12.3],[-70,11.5],[-63,10.7],[-61,10.2],[-57,6],[-52,5],[-50,1.7],[-48.5,-1],[-44.5,-2.5],[-40,-2.9],[-35.3,-5.2],[-34.8,-7.5],[-37,-11],[-39,-13.5],[-39,-17.6],[-40.7,-21.7],[-43,-23],[-48.5,-26.2],[-48.6,-28.5],[-52,-32.2],[-53.4,-33.7],[-57.5,-34.8],[-57.2,-36.3],[-58.4,-38.3],[-62.3,-38.8],[-62.2,-40.8],[-65,-41],[-63.8,-42.2],[-65.2,-45],[-67.6,-46.4],[-65.8,-47.8],[-69.1,-50.3],[-68.2,-52.5],[-71,-53.8],[-74.6,-52.5],[-75.5,-48.7],[-74,-43.5],[-73.6,-37.2],[-71.4,-32.4],[-71.4,-28.8],[-70.4,-23.5],[-70.3,-18.4],[-71.4,-17.8],[-76.2,-13.6],[-77.7,-11],[-79.8,-7.2],[-81.2,-5.9],[-80.3,-3.4],[-80,-2.2],[-80.9,-1],[-80,0.8],[-78.8,1.4],[-77.9,2.7],[-77.1,3.8],[-77.5,6.7]],
+  [[113.4,-22],[114.2,-26.3],[115,-30],[115.7,-33.5],[118,-35],[122,-34],[123.6,-33.9],[126.2,-32.2],[131.3,-31.5],[134.3,-33],[135.9,-35],[137.9,-33.6],[138.4,-35.1],[140,-37.4],[143.8,-38.8],[146.3,-39],[150,-37.4],[150.7,-34.5],[152.9,-31.6],[153.6,-28],[153,-25.5],[150.5,-22.4],[149,-20.6],[146.4,-19],[145.4,-15.4],[143.6,-14],[142.5,-10.7],[141.6,-12.9],[141.5,-15],[140.2,-17.7],[136.8,-15.9],[135.4,-14.7],[136.9,-12.3],[132.6,-11.5],[131,-12.2],[129.4,-14.4],[126.1,-14.3],[125.1,-16.2],[122.2,-18.2],[121,-19.5],[117.2,-20.6]],
+  [[130,31.2],[131.4,33.6],[135,34],[136.8,34.7],[139.8,35],[140.9,36.9],[141.5,38.6],[142,40],[141.4,41.4],[140,41.5],[140.2,40],[139.9,38],[138.6,37.3],[137,37],[136,35.8],[133,35.5],[131,34.3],[130,33.5]]
+];
+const GREENLAND = [[-73,78],[-60,82],[-40,83.5],[-22,82],[-18,78],[-22,72],[-24,69],[-32,68],[-40,65],[-43,60],[-48,61],[-52,65],[-54,68],[-56,72],[-66,76]];
+
+/* ───────── 3D 화면 ─────────
+   view: 'orbit'(가운데 태양, 공전하는 지구, 바깥 황도 12궁 띠) · 'west'(해가 진 직후 서쪽 하늘, 2D 그림)
+   t: 1월 1일부터 지난 달 수 (t=2.5 → 3월 16일). 태양의 겉보기 위치는 띠에서 t×30°에 있어요. */
+const Stage = (() => {
+  const S = { view: 'orbit', cam: 'oblique', t: 2.5, t0: 2.5, playing: false, speed: 1, goal: null, rate: 2,
+    sunLine: true, nightLine: true, trail: false, marks: false, simple: false, frame: 'star', fb: 0, ft0: 0, fh: 0, hudAns: true, wmode: 'single', d: 1, ov: 1, ovRun: false, smode: 'day', s: 0 };
+  const SPEEDS = [0.25, 0.7, 2]; // 1초에 흐르는 달 수
+  const watch = {}, hooks = { watch: null, change: null };
+  const el = document.createElement('div'); el.className = 'stage';
+  if (!window.THREE || !THREE.OrbitControls) {
+    el.innerHTML = '<div class="nogl">3D 화면을 불러오지 못했어요.<br>인터넷 연결을 확인하고 새로고침해 주세요.</div>';
+    const noop = () => {};
+    return { ok: false, el, S, watch, hooks, set: o => Object.assign(S, o), play: noop, step: noop, reset: noop, preset: noop, trailReset: noop, playWest: noop, overlayAgain: noop };
+  }
+  el.innerHTML = '<canvas class="gl"></canvas><canvas class="ov"></canvas><div class="hud"><span></span></div>';
+  const glc = el.querySelector('.gl'), ov = el.querySelector('.ov'), ctx = ov.getContext('2d'), hudEl = el.querySelector('.hud span');
+  const renderer = new THREE.WebGLRenderer({ canvas: glc, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 400);
+  const controls = new THREE.OrbitControls(camera, glc);
+  controls.enableDamping = true; controls.dampingFactor = 0.12; controls.enablePan = false; controls.rotateSpeed = 0.6;
+  controls.minDistance = 10; controls.maxDistance = 70;
+  scene.add(new THREE.AmbientLight(0xffffff, 0.16));
+  const sunLight = new THREE.PointLight(0xffffff, 1.7, 0, 0); scene.add(sunLight);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const basic = (color, o) => new THREE.MeshBasicMaterial(Object.assign({ color }, o || {}));
+  const RO = 6, RB = 13, HB = 3.2; // 공전 궤도 반지름, 별자리 띠 반지름·높이
+  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  // 위에서 볼 때 시계 반대 방향이 + (지구 공전 방향, 서→동)
+  const ring = (r, deg, y) => V(r * Math.cos(deg * D2R), y || 0, -r * Math.sin(deg * D2R));
+
+  function earthTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+    const g = c.getContext('2d');
+    const P = (lo, la) => [(lo + 180) / 360 * 1024, (90 - la) / 180 * 512];
+    const poly = (pts, fill) => { g.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p[0], p[1]); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fillStyle = fill; g.fill(); };
+    g.fillStyle = '#1f5fae'; g.fillRect(0, 0, 1024, 512);
+    LAND.forEach(p => poly(p, '#4f9a55'));
+    poly(GREENLAND, '#e6eff4');
+    g.fillStyle = '#e6eff4'; g.fillRect(0, P(0, -68)[1], 1024, 512);
+    return new THREE.CanvasTexture(c);
+  }
+  const orbitG = new THREE.Group(); scene.add(orbitG);
+  // 태양
+  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 16), basic(0xffc93c)); orbitG.add(sunMesh);
+  (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,220,120,1)'); gr.addColorStop(0.35, 'rgba(255,170,40,.6)'); gr.addColorStop(1, 'rgba(255,140,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthWrite: false, transparent: true }));
+    sp.scale.set(5.5, 5.5, 1); orbitG.add(sp);
+  })();
+  // 공전 궤도
+  orbitG.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 128 }, (_, i) => ring(RO, i / 128 * 360))), new THREE.LineBasicMaterial({ color: 0x9fc4ff, transparent: true, opacity: 0.55 })));
+  // 공전 방향 화살표 (궤도 위 두 곳)
+  function arcArrow(r, a0, a1, color, th) {
+    const pts = []; for (let i = 0; i <= 30; i++) pts.push(ring(r, a0 + (a1 - a0) * i / 30));
+    const mat = basic(color), g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, th, 8, false), mat));
+    const end = ring(r, a1), dir = end.clone().sub(ring(r, a1 - Math.sign(a1 - a0) * 2)).normalize();
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(th * 3.2, th * 9, 16), mat);
+    cone.position.copy(end).addScaledVector(dir, th * 3); cone.quaternion.setFromUnitVectors(V(0, 1, 0), dir);
+    g.add(cone); g.userData = { mid: ring(r, (a0 + a1) / 2) };
+    return g;
+  }
+  const arrA = arcArrow(RO, 240, 290, 0x7cc4ff, 0.06), arrB = arcArrow(RO, 60, 110, 0x7cc4ff, 0.06); orbitG.add(arrA, arrB);
+  // 지구 (태양 빛으로 낮·밤이 생겨요. 자전축은 23.5° 기울어져 6월에 북극이 태양 쪽)
+  const earthG = new THREE.Group(); orbitG.add(earthG);
+  const tiltG = new THREE.Group(); earthG.add(tiltG);
+  const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(0.62, 48, 24), new THREE.MeshLambertMaterial({ map: earthTexture() })); tiltG.add(earthMesh);
+  tiltG.add(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.8, 8), basic(0xff5a5a)));
+  tiltG.quaternion.setFromUnitVectors(V(0, 1, 0), V(Math.sin(23.5 * D2R) * Math.cos(150 * D2R), Math.cos(23.5 * D2R), -Math.sin(23.5 * D2R) * Math.sin(150 * D2R)));
+  // 황도 12궁 띠
+  orbitG.add(new THREE.Mesh(new THREE.CylinderGeometry(RB, RB, HB, 120, 1, true), basic(0x1d3a8a, { transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false })));
+  orbitG.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 180 }, (_, i) => ring(RB - 0.02, i * 2))), new THREE.LineBasicMaterial({ color: 0xffa64d, transparent: true, opacity: 0.7 })));
+
+  function preset() {
+    // 화면이 좁을수록 멀리서 봐서 별자리 띠가 잘리지 않게 해요
+    const far = Math.max(1, 1.3 / (camera.aspect || 1.3));
+    controls.target.set(0, -1.2, 0);
+    if (S.cam === 'top') camera.position.set(0, 34 * far, 0.01);
+    else camera.position.set(0, 13.5 * far, 30 * far);
+    controls.update();
+  }
+  function applyView() { orbitG.visible = S.view === 'orbit'; controls.enabled = S.view === 'orbit'; }
+  function set(o) {
+    const pv = S.view, pc = S.cam, pw = S.wmode;
+    Object.assign(S, o);
+    if ('t' in o) { S.goal = null; S.t0 = S.t; }
+    if (S.wmode !== pw && S.wmode !== 'single') { S.ov = 0; S.ovRun = false; } // 겹치기를 고르면 투명 종이 3장을 나란히 놓고 기다려요
+    if ('smode' in o) S.s = 0;
+    if (S.frame === 'sun' && ('frame' in o || 't' in o)) frameStart();
+    applyView();
+    if (S.view !== pv || S.cam !== pc) preset();
+  }
+  function play() {
+    S.goal = null; S.playing = !S.playing;
+    if (S.view === 'west' && S.playing && S.d >= 31) S.d = 1;
+    if (S.view === 'south' && S.playing && S.s >= 4) S.s = 0;
+  }
+  // 선생님이 버튼을 누르면 겹치기 시작, 다 겹친 뒤 다시 누르면 처음처럼 나란히 펼쳐요
+  function overlayAgain() { if (S.ov >= 1) { S.ov = 0; S.ovRun = false; } else S.ovRun = true; }
+  function step(m) { S.playing = false; S.goal = (S.goal == null ? S.t : S.goal) + m; S.rate = S.frame === 'sun' ? 0.8 : 2; }
+  /* 태양 기준 보기: 화면을 지구와 함께 돌려서 지구 → 태양 방향을 고정해요.
+     그러면 별자리 띠가 반대로 돌아 별자리가 동 → 서로 옮겨 가요(별의 연주 운동).
+     지금 태양보다 약 45° 동쪽의 별자리 하나를 골라 지나온 자리(1, 2, 3 …)를 표시해요. */
+  function frameStart() { S.ft0 = S.t; S.fh = Math.floor(((S.t * 30 + 45) % 360 + 360) % 360 / 30); }
+  // 띠 좌표에 더해지는 회전 각(°). 태양 기준이면 지구가 늘 화면 뒤쪽(90°, 낮 쪽이 보임)에 있고
+  // 지구 → 태양 방향이 화면 앞쪽 띠(270°)를 가리켜요
+  const wrap = d => ((d + 180) % 360 + 360) % 360 - 180;
+  const rotDeg = () => S.fb * wrap(-90 - S.t * 30);
+  function reset() { S.playing = false; S.goal = null; if (S.view === 'west') S.d = 1; else if (S.view === 'south') S.s = 0; else { S.t = Math.floor(S.t) + 0.0; S.t0 = S.t; } }
+  function trailReset() { S.t0 = S.t; }
+  // 8월 1일부터 31일까지 해 진 직후 서쪽 하늘을 이어서 보여 줘요
+  function playWest() { S.d = 1; S.playing = true; }
+
+  let W = 1, H = 1, DPR = 1;
+  new ResizeObserver(() => {
+    W = el.clientWidth; H = el.clientHeight; if (!W || !H) return;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setSize(W, H, false); ov.width = Math.round(W * DPR); ov.height = Math.round(H * DPR);
+    camera.aspect = W / H; camera.updateProjectionMatrix();
+    if (S.view === 'orbit') preset();
+  }).observe(el);
+
+  const M = new THREE.Matrix4();
+  function P(v) {
+    const e = M.elements, x = v.x, y = v.y, z = v.z, w = e[3] * x + e[7] * y + e[11] * z + e[15];
+    if (w < 0.05) return null;
+    return [((e[0] * x + e[4] * y + e[8] * z + e[12]) / w + 1) * W / 2, (1 - (e[1] * x + e[5] * y + e[9] * z + e[13]) / w) * H / 2];
+  }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0); ctx.lineTo(x + w, y + h - r); ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2); ctx.lineTo(x + r, y + h); ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI); ctx.lineTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5); ctx.closePath(); }
+  function tag(text, q, o) {
+    if (!q) return; o = o || {};
+    const size = o.size || 15;
+    ctx.font = `${size}px "Do Hyeon","Noto Sans KR",sans-serif`;
+    const w = ctx.measureText(text).width + 16, h = size + 10;
+    const x = q[0] - w / 2 + (o.dx || 0), y = q[1] - h / 2 + (o.dy || 0);
+    ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
+    ctx.fillStyle = o.bg || 'rgba(8,14,40,.8)'; rr(x, y, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = o.fg || '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+    ctx.globalAlpha = 1;
+  }
+  function head(q, dx, dy, s, color) {
+    const L = Math.hypot(dx, dy); if (L < 0.01) return;
+    const ux = dx / L, uy = dy / L;
+    ctx.beginPath();
+    ctx.moveTo(q[0] + ux * s, q[1] + uy * s);
+    ctx.lineTo(q[0] - ux * s * 0.5 - uy * s * 0.62, q[1] - uy * s * 0.5 + ux * s * 0.62);
+    ctx.lineTo(q[0] - ux * s * 0.15, q[1] - uy * s * 0.15);
+    ctx.lineTo(q[0] - ux * s * 0.5 + uy * s * 0.62, q[1] - uy * s * 0.5 - ux * s * 0.62);
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.stroke();
+  }
+  // 꼬리가 있는 굵은 화살표 p → q. side만큼 옆으로 비켜 그려서 별·태양을 가리지 않아요
+  function tailArrow(p, q, color, side) {
+    const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy); if (L < 4) return;
+    const ux = dx / L, uy = dy / L, nx = -uy * side, ny = ux * side, hs = 20;
+    const a = [p[0] + nx + ux * L * 0.1, p[1] + ny + uy * L * 0.1], b = [q[0] + nx - ux * L * 0.1, q[1] + ny - uy * L * 0.1];
+    const e = [b[0] - ux * hs * 0.7, b[1] - uy * hs * 0.7];
+    ctx.lineCap = 'round';
+    [['rgba(0,0,0,.55)', 11], [color, 6]].forEach(([c, w]) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(e[0], e[1]); ctx.stroke(); });
+    head([b[0] - ux * hs, b[1] - uy * hs], ux, uy, hs * 1.3, color);
+  }
+  function dashLine(a, b, color, w) {
+    if (!a || !b) return;
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash([9, 7]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
+    head(b, b[0] - a[0], b[1] - a[1], 12, color);
+  }
+
+  /* 태양 기준 보기: 고른 별자리가 지나온 자리와 동 → 서 화살표 (rot: 띠의 회전 각) */
+  function drawStarFrame(rot) {
+    const c = S.fh * 30 + 15, span = Math.max(0, S.t - S.ft0), y = -HB / 2 + 0.35;
+    // 띠 좌표에서 (지금 - 그때) × 30°만큼 앞선 곳이 그때 별자리가 화면에서 있던 자리예요
+    if (span > 0.01) {
+      const n = Math.max(2, Math.ceil(span * 12));
+      ctx.strokeStyle = 'rgba(124,196,255,.95)'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); let pen = false;
+      for (let i = 0; i <= n; i++) { const q = P(ring(RB - 0.1, c + span * 30 * i / n, y)); if (!q) { pen = false; continue; } if (pen) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); pen = true; }
+      ctx.stroke();
+      for (let k = 1; k <= Math.floor(span * 2); k++) { const ang = c + k * 15, q = P(ring(RB - 0.1, ang - 7, y)), q2 = P(ring(RB - 0.1, ang - 10, y)); if (q && q2) head(q, q2[0] - q[0], q2[1] - q[1], 12, '#7cc4ff'); }
+    }
+    for (let k = 0; k <= Math.min(8, Math.floor(span + 1e-6)); k++) {
+      const q = P(ring(RB - 0.1, c + (span - k) * 30, y)); if (!q) continue;
+      tag(`${k + 1}`, q, { size: 18, bg: '#7cc4ff', fg: '#06142b' });
+    }
+    tag(`⭐ ${ZOD[S.fh]}`, P(ring(RB, c, HB / 2 + 0.7)), { size: 17, bg: '#7cc4ff', fg: '#06142b' });
+    if (S.fb >= 1) {
+      tag('동', P(ring(RB, 330 - rot, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
+      tag('서', P(ring(RB, 210 - rot, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
+    }
+    tag(span >= 1 ? `한 달씩 공전할 때마다, 태양을 기준으로 ${ZOD[S.fh]}는 1 → 2 → 3 … 동 → 서로 옮겨 가요 (별의 연주 운동)` : '🔄 태양 기준: 지구 → 태양 방향을 고정했어요. +1달을 눌러 별자리가 어느 쪽으로 가는지 보세요',
+      [W / 2, H - 26], { size: 16, bg: '#7cc4ff', fg: '#06142b' });
+  }
+
+  /* 공전 모형 그리기 */
+  function drawOrbit() {
+    const a = S.t * 30, sunIdx = ((Math.floor(S.t) % 12) + 12) % 12, nightIdx = (sunIdx + 6) % 12;
+    const E = ring(RO, a + 180), qE = P(E);
+    // 별자리
+    ZSH.forEach((shape, i) => {
+      const c = i * 30 + 15, isSun = i === sunIdx && S.sunLine, isNight = i === nightIdx && S.nightLine;
+      const alpha = isSun ? 0.35 : 1, col = isNight ? '#fff2a8' : '#dfe8ff';
+      ctx.globalAlpha = alpha; ctx.strokeStyle = isNight ? 'rgba(255,230,140,.9)' : 'rgba(170,200,255,.65)'; ctx.lineWidth = isNight ? 2.2 : 1.3;
+      shape.forEach(line => {
+        ctx.beginPath(); let pen = false;
+        line.forEach(([dx, dy]) => { const q = P(ring(RB - 0.05, c + dx, dy * 0.95)); if (!q) { pen = false; return; } if (pen) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); pen = true; });
+        ctx.stroke();
+        line.forEach(([dx, dy]) => { const q = P(ring(RB - 0.05, c + dx, dy * 0.95)); if (!q) return; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q[0], q[1], isNight ? 3.4 : 2.4, 0, Math.PI * 2); ctx.fill(); });
+      });
+      ctx.globalAlpha = 1;
+      // 큰 화면(TV)에서는 달·별자리 이름도 크게
+      const fs = clamp(W / 70, 13, 22);
+      // 탭 ①은 태양의 연주 운동 방향만 봐요: 달 글씨는 숨기고 별자리 이름은 흐린 배경으로만
+      if (S.simple) { tag(ZOD[i], P(ring(RB, c, -HB / 2 - 0.7)), { size: fs * 0.85, bg: 'rgba(8,14,40,.5)', fg: '#aebde6', alpha: 0.6 }); return; }
+      tag(`${i + 1}월`, P(ring(RB, c, HB / 2 + 0.6)), { size: fs, bg: 'rgba(8,14,40,.7)', alpha });
+      tag(ZOD[i], P(ring(RB, c, -HB / 2 - 0.7)), { size: fs, bg: isNight ? '#ffe28a' : 'rgba(8,14,40,.7)', fg: isNight ? '#2a1c00' : '#dfe8ff', alpha });
+    });
+    const sunF = S.frame === 'sun' || S.fb > 0, rot = rotDeg();
+    if (sunF) drawStarFrame(rot);
+    // 태양의 겉보기 위치와 자취 (서→동)
+    if (S.trail && !sunF && S.t > S.t0 + 0.01) {
+      const span = Math.min(12, S.t - S.t0), n = Math.max(2, Math.ceil(span * 12));
+      ctx.strokeStyle = 'rgba(255,170,60,.9)'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); let pen = false;
+      for (let i = 0; i <= n; i++) { const q = P(ring(RB - 0.1, (S.t - span + span * i / n) * 30, 0)); if (!q) { pen = false; continue; } if (pen) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); pen = true; }
+      ctx.stroke();
+      for (let k = 1; k <= Math.floor(span * 2); k++) { const ang = (S.t - k * 0.5) * 30, q = P(ring(RB - 0.1, ang, 0)), q2 = P(ring(RB - 0.1, ang + 3, 0)); if (q && q2) head(q, q2[0] - q[0], q2[1] - q[1], 11, '#ff9a3d'); }
+    }
+    // 지구 위치 1, 2, 3 …과 그때 천구(별자리 띠)에 보이는 태양 위치 1′, 2′, 3′ … (교과서 그림과 같은 방식)
+    if (S.marks && !sunF) {
+      const n = Math.min(8, Math.floor(S.t - S.t0 + 1e-6));
+      for (let k = 0; k <= n; k++) {
+        const tk = S.t0 + k, qe = P(ring(RO, tk * 30 + 180)), qb = P(ring(RB - 0.1, tk * 30, 0));
+        if (!qe || !qb) continue;
+        ctx.strokeStyle = 'rgba(255,140,190,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(qe[0], qe[1]); ctx.lineTo(qb[0], qb[1]); ctx.stroke();
+        ctx.fillStyle = '#7ce0a0'; ctx.beginPath(); ctx.arc(qe[0], qe[1], 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(qb[0], qb[1], 9, 0, Math.PI * 2); ctx.fill();
+        tag(`${k + 1}`, qe, { dy: 20, size: 17, bg: '#7ce0a0', fg: '#06200f' });
+        tag(`${k + 1}′`, qb, { dy: -24, size: 18, bg: '#ffd34d', fg: '#2a1c00' });
+      }
+      if (n >= 1) {
+        tag('서', P(ring(RB, S.t0 * 30 - 12, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
+        tag('동', P(ring(RB, S.t * 30 + 12, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
+        tag('지구가 1 → 2 → 3 … 공전하면 태양은 1′ → 2′ → 3′ … 서 → 동으로 이동해 보여요', [W / 2, H - 26], { size: 16, bg: '#ff9a3d', fg: '#2a1000' });
+      } else tag('+1달을 눌러 지구를 옮겨 보세요. 지구 위치(1, 2, 3…)와 그때 태양이 보이는 천구 위치(1′, 2′, 3′…)가 표시돼요', [W / 2, H - 26], { size: 15 });
+    }
+    const qSunApp = P(ring(RB - 0.1, a, 0));
+    if (S.sunLine) {
+      dashLine(qE, qSunApp, 'rgba(255,170,60,.95)', 2.5);
+      if (qSunApp) {
+        const gr = ctx.createRadialGradient(qSunApp[0], qSunApp[1], 0, qSunApp[0], qSunApp[1], 16);
+        gr.addColorStop(0, 'rgba(255,230,140,1)'); gr.addColorStop(1, 'rgba(255,150,30,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(qSunApp[0], qSunApp[1], 16, 0, Math.PI * 2); ctx.fill();
+      }
+      // 띠의 'n월'은 그 달에 태양이 있는 쪽의 별자리라는 걸 함께 보여 줘요
+      if (S.simple) tag(sunF ? '☀ 태양 방향 (고정)' : '☀ 지구에서 본 태양의 위치 (별자리 앞)', P(ring(RB, a, HB / 2 + 1.7)), { size: 16, bg: '#ff9a3d', fg: '#2a1000' });
+      else tag(S.hudAns ? `☀ 지금 ${sunIdx + 1}월: 태양이 '${sunIdx + 1}월' 별자리(${ZOD[sunIdx]}) 쪽 · 낮이라 안 보여요` : '☀ 태양 쪽 별자리 · 낮에 떠 있어 안 보여요', P(ring(RB, sunIdx * 30 + 15, HB / 2 + 1.7)), { size: 16, bg: '#ff9a3d', fg: '#2a1000' });
+    }
+    if (S.nightLine) {
+      dashLine(qE, P(ring(RB - 0.1, a + 180, 0)), 'rgba(124,196,255,.95)', 2.5);
+      tag(S.hudAns ? `🌙 ${sunIdx + 1}월 한밤중 남쪽 하늘: '${nightIdx + 1}월' 별자리(${ZOD[nightIdx]})` : '🌙 태양 반대쪽 · 한밤중 남쪽 하늘', P(ring(RB, nightIdx * 30 + 15, HB / 2 + 1.7)), { size: 16, bg: '#7cc4ff', fg: '#06142b' });
+      // 지구의 한밤중 쪽 표시
+      const night = E.clone().add(E.clone().normalize().multiplyScalar(0.95));
+      tag('한밤중', P(night), { size: 12, bg: 'rgba(20,30,70,.85)' });
+    }
+    tag('태양', P(V(0, -1.6, 0)), { size: 15, bg: '#ffc93c', fg: '#2a1c00' });
+    tag('지구', qE, { dy: -26, size: 14 });
+    if (!S.nightLine && !sunF) tag('지구의 공전 방향 (서 → 동)', P(arrA.userData.mid), { dy: 22, size: 13, bg: 'rgba(124,196,255,.9)', fg: '#06142b' });
+    // 탭 ①에서는 태양 이름표가 띠 뒤쪽을 지나가므로 제목을 오른쪽 위 구석에 둬요
+    if (S.simple) tag('바깥 띠: 천구의 별자리 (배경)', [W - 150, 30], { size: 16, bg: 'rgba(29,58,138,.9)' });
+    else tag('황도 12궁 (별자리 띠)', P(ring(RB, 90, HB / 2 + 2.4)), { size: 14, bg: 'rgba(8,14,40,.7)' });
+    if (!S.marks) tag("띠의 '3월' = 3월에 태양이 그 별자리 쪽에 있어요 (그래서 3월 밤엔 안 보여요)", [W / 2, H - 24], { size: 15, bg: 'rgba(8,14,40,.85)', fg: '#ffd9a8' });
+  }
+
+  /* 해가 진 직후 서쪽 하늘 (8월, 사자자리) — 교과서 탐구 그림과 같은 구성 */
+  const LEO = [[0, 0], [-20, -16], [-24, -42], [-46, -56], [-44, -82], [-64, -94], [-80, -80], [-62, -34], [-24, -42]];
+  const LEOL = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [2, 7], [7, 1]];
+  function drawLeo(o, sc, color, alpha) {
+    const pts = LEO.map(([x, y]) => [o[0] + x * sc, o[1] + y * sc]);
+    ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    LEOL.forEach(([i, j]) => { ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); }); ctx.stroke();
+    ctx.fillStyle = color; pts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4.2, 0, Math.PI * 2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    return pts;
+  }
+  function drawSunDisk(p, r) {
+    const gr = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r * 2.2);
+    gr.addColorStop(0, 'rgba(255,236,150,1)'); gr.addColorStop(0.45, 'rgba(255,170,40,.95)'); gr.addColorStop(1, 'rgba(255,120,0,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(p[0], p[1], r * 2.2, 0, Math.PI * 2); ctx.fill();
+  }
+  /* 투명 종이 한 장 = 그날 해가 진 직후 서쪽 하늘. (ox, oy) 위치에 s배로 그려요.
+     겹치기는 이 종이 3장(8월 1일·16일·31일)을 나란히 놓았다가, 태양이나 사자자리가 맞도록 미끄러뜨려 겹쳐요. */
+  const COL = { 1: '#ffffff', 16: '#9fd3ff', 31: '#ffd34d' };
+  const westGeom = () => {
+    const y0 = H * 0.74, S0 = [W * 0.6, y0 + 16], k = H * 0.0145, u = [-0.52, -0.85];
+    return { y0, S0, leoAt: d => [S0[0] + u[0] * (31 - d) * k, S0[1] + u[1] * (31 - d) * k] };
+  };
+  function drawSheet(d, ox, oy, s, o) {
+    const g = westGeom(), sc = H / 380;
+    ctx.save(); ctx.translate(ox, oy); ctx.scale(s, s);
+    ctx.save(); rr(0, 0, W, H, 16); ctx.clip();
+    if (o.skyA > 0) {
+      const sky = ctx.createLinearGradient(0, 0, 0, g.y0);
+      sky.addColorStop(0, '#0f1d4d'); sky.addColorStop(0.6, '#5a4a7a'); sky.addColorStop(1, '#e98a52');
+      ctx.globalAlpha = o.skyA; ctx.fillStyle = sky; ctx.fillRect(0, 0, W, g.y0); ctx.globalAlpha = 1;
+    }
+    const L = g.leoAt(d);
+    drawLeo(L, sc, o.color || COL[d]);
+    ctx.globalAlpha = o.groundA; ctx.fillStyle = '#3a2f26'; ctx.fillRect(0, g.y0, W, H - g.y0); ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2 / s; ctx.setLineDash([10, 7]); ctx.beginPath(); ctx.moveTo(0, g.y0); ctx.lineTo(W, g.y0); ctx.stroke(); ctx.setLineDash([]);
+    drawSunDisk(g.S0, 14);
+    if (o.label) { const ls = o.labelSize || 26; tag(`8월 ${d}일`, [ls * 4, ls * 1.6], { size: ls, bg: 'rgba(8,14,40,.8)', fg: COL[d] }); }
+    if (o.compass) {
+      tag('사자자리', [L[0] - 30 * sc, L[1] - 110 * sc], { size: 16, bg: 'rgba(8,14,40,.7)' });
+      tag('태양 (막 졌어요)', [g.S0[0] + 70, g.S0[1] + 16], { size: 13 });
+      tag('서', [W * 0.45, g.y0 + 22], { size: 22, bg: 'transparent', fg: '#ff7ab8' });
+      tag('← 남', [40, g.y0 + 22], { size: 14, bg: 'rgba(8,14,40,.6)' });
+      tag('북 →', [W - 40, g.y0 + 22], { size: 14, bg: 'rgba(8,14,40,.6)' });
+    }
+    ctx.restore();
+    if (o.border) { ctx.strokeStyle = COL[d]; ctx.lineWidth = 3 / s; rr(0, 0, W, H, 16); ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawWest() {
+    const g = westGeom(), mode = S.wmode;
+    if (mode === 'single') { drawSheet(clamp(S.d, 1, 31), 0, 0, 1, { skyA: 1, groundA: 1, compass: true, color: '#ffffff' }); return; }
+    ctx.fillStyle = '#0a1230'; ctx.fillRect(0, 0, W, H);
+    // 0 ~ 0.25: 나란히 놓인 투명 종이 3장, 0.25 ~ 1: 기준을 맞추며 겹치기
+    const e = ease(clamp(S.ov, 0, 1));
+    const off = d => { if (mode === 'sun') return [0, 0]; const a = g.leoAt(16), b = g.leoAt(d); return [a[0] - b[0], a[1] - b[1]]; };
+    [1, 16, 31].forEach((d, i) => {
+      const sx = W * (0.02 + i * 0.33), sy = H * 0.2, ss = 0.31, f = off(d);
+      // 태양 기준은 첫 장의 하늘을 그대로 두고, 별자리 기준은 겹칠수록 모든 종이가 투명해져서 지평선 세 개가 보여요
+      const keep = mode === 'sun' && i === 0;
+      drawSheet(d, sx + (f[0] - sx) * e, sy + (f[1] - sy) * e, ss + (1 - ss) * e, {
+        skyA: keep ? 1 : 1 - e, groundA: keep ? 0.95 : 0.95 - 0.65 * e, label: e < 0.98, border: e < 0.98, labelSize: e < 0.4 ? 60 : 26
+      });
+    });
+    if (e < 1) {
+      const what = mode === 'sun' ? '태양이' : '사자자리가';
+      tag(S.ovRun ? `📌 ${what} 같은 자리에 오도록 겹치는 중…` : `📌 15일 간격 그림 3장(투명 종이)이에요. 버튼을 누르면 ${what} 같은 자리에 오도록 겹쳐요`, [W / 2, H * 0.1], { size: 18, bg: '#ff5fa2', fg: '#fff' });
+      return;
+    }
+    if (mode === 'sun') {
+      const sc = H / 380;
+      [1, 16, 31].forEach(d => { const p = g.leoAt(d); tag(`8월 ${d}일`, [p[0] - 92 * sc, p[1] - 100 * sc], { size: 14, bg: 'rgba(8,14,40,.75)', fg: COL[d] }); });
+      // 사자자리 가운데끼리 이어서 8월 1일 → 16일 → 31일 이동 방향
+      const mid = d => { const p = g.leoAt(d); return [p[0] - 40 * sc, p[1] - 46 * sc]; };
+      [[1, 16], [16, 31]].forEach(([a, b]) => tailArrow(mid(a), mid(b), '#ff5fa2', 95 * sc));
+      ctx.strokeStyle = '#ff5fa2'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(g.S0[0], g.S0[1], 30, 0, Math.PI * 2); ctx.stroke();
+      tag('기준: 태양', [g.S0[0], g.S0[1] - 44], { size: 14, bg: '#ff5fa2', fg: '#fff' });
+      tag('태양을 기준으로 별자리는 동 → 서로 이동 (별의 연주 운동)', [W / 2, H - 24], { size: 16, bg: '#ff5fa2', fg: '#fff' });
+    } else {
+      const sunAt = d => { const f = off(d); return [g.S0[0] + f[0], g.S0[1] + f[1]]; };
+      [1, 16, 31].forEach(d => tag(`8월 ${d}일`, sunAt(d), { dx: -78, size: 14, bg: 'rgba(8,14,40,.8)', fg: COL[d] }));
+      [[1, 16], [16, 31]].forEach(([a, b]) => tailArrow(sunAt(a), sunAt(b), '#ff5fa2', -40));
+      const L = g.leoAt(16), sc = H / 380;
+      ctx.strokeStyle = '#ff5fa2'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(L[0] - 40 * sc, L[1] - 46 * sc, 70 * sc, 0, Math.PI * 2); ctx.stroke();
+      tag('기준: 사자자리', [L[0] - 40 * sc, L[1] - 128 * sc], { size: 14, bg: '#ff5fa2', fg: '#fff' });
+      tag('별자리를 기준으로 태양은 서 → 동으로 이동 (태양의 연주 운동)', [W / 2, H - 24], { size: 16, bg: '#ff5fa2', fg: '#fff' });
+    }
+  }
+  /* 남쪽 하늘의 오리온자리: 일주 운동(같은 날 1시간 간격)과 연주 운동(같은 시각 15일 간격) 비교.
+     1시간에 15°, 하루에 약 1°라서 15일 간격 그림이 1시간 간격 그림과 같은 자리에 와요. */
+  const ORI = [[0, -46], [-18, -30], [16, -28], [-6, 0], [0, -2], [6, -4], [-14, 30], [16, 28]];
+  const ORIL = [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5], [3, 6], [5, 7]];
+  const S_TIME = ['저녁 8시', '밤 9시', '밤 10시', '밤 11시', '밤 12시'];
+  const S_DATE = ['12월 1일', '12월 16일', '12월 31일', '1월 15일', '1월 30일'];
+  /* 태양의 연주 운동: 남쪽을 보고 선 방향(왼쪽 동, 오른쪽 서)으로 황도 별자리를 늘어놓고
+     15일마다 태양이 별자리 사이를 서 → 동(오른쪽 → 왼쪽)으로 옮겨 가는 모습. 낮에는 별이 안 보이지만 보인다고 생각하고 그려요. */
+  function drawSunStrip() {
+    const y0 = H * 0.8, cx = W / 2, yc = H * 0.42, ppd = W / 140, hy = H * 0.07;
+    const sky = ctx.createLinearGradient(0, 0, 0, y0); sky.addColorStop(0, '#060c26'); sky.addColorStop(1, '#1b2a5c');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, y0);
+    const X = L => cx - (L - 360) * ppd; // 황경(도) → 화면 x. 동쪽(큰 값)이 왼쪽
+    ctx.strokeStyle = 'rgba(255,166,77,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, yc); ctx.lineTo(W, yc); ctx.stroke();
+    tag('황도', [W - 50, yc - 16], { size: 13, bg: 'rgba(255,166,77,.85)', fg: '#2a1000' });
+    [10, 11, 0, 1].forEach(i => { // 11월 천칭 · 12월 전갈 · 1월 궁수 · 2월 염소
+      const c = i * 30 + 15 + (i < 6 ? 360 : 0), fs = clamp(W / 70, 13, 20);
+      ctx.strokeStyle = 'rgba(170,200,255,.75)'; ctx.lineWidth = 1.5; ctx.fillStyle = '#dfe8ff';
+      ZSH[i].forEach(line => {
+        ctx.beginPath(); line.forEach(([dx, dy], j) => { const x = X(c + dx * 1.2), y = yc - dy * hy; if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke();
+        line.forEach(([dx, dy]) => { ctx.beginPath(); ctx.arc(X(c + dx * 1.2), yc - dy * hy, 3.4, 0, Math.PI * 2); ctx.fill(); });
+      });
+      tag(ZOD[i], [X(c), yc + hy * 1.9], { size: fs, bg: 'rgba(8,14,40,.75)' });
+    });
+    const n = Math.floor(S.s + 1e-6), sunL = k => 330 + 15 * k;
+    for (let k = 0; k <= Math.min(4, n); k++) {
+      const p = [X(sunL(k)), yc];
+      drawSunDisk(p, k === n ? 16 : 11);
+      tag(S_DATE[k], [p[0], p[1] - 46], { size: 14, bg: 'rgba(8,14,40,.85)', fg: '#ffd34d' });
+    }
+    if (S.s - n > 1e-3) drawSunDisk([X(sunL(S.s)), yc], 16);
+    for (let k = 0; k < Math.min(4, n); k++) tailArrow([X(sunL(k)), yc], [X(sunL(k + 1)), yc], '#ff9a3d', 70);
+    ctx.fillStyle = '#18301f'; ctx.fillRect(0, y0, W, H - y0);
+    tag('남', [cx, y0 + 24], { size: 24, bg: '#ff8a3d', fg: '#fff' });
+    tag('← 동', [50, y0 + 24], { size: 18, bg: '#ff8a3d', fg: '#fff' });
+    tag('서 →', [W - 50, y0 + 24], { size: 18, bg: '#ff8a3d', fg: '#fff' });
+    tag('(낮에는 별이 안 보이지만, 별자리가 보인다고 생각하고 그렸어요)', [W / 2, H * 0.12], { size: 14, bg: 'rgba(8,14,40,.8)', fg: '#cfe0ff' });
+    tag('태양의 연주 운동: 별자리 사이를 하루에 약 1°씩 서 → 동 (지구의 공전) · 별의 연주 운동과 반대 방향', [W / 2, H - 22], { size: 16, bg: '#ff9a3d', fg: '#2a1000' });
+  }
+  function drawSouth() {
+    if (S.smode === 'sun') { drawSunStrip(); return; }
+    const y0 = H * 0.8, cx = W / 2, cy = y0 + H * 0.9, R = H * 1.35, sc = H / 420;
+    const sky = ctx.createLinearGradient(0, 0, 0, y0); sky.addColorStop(0, '#060c26'); sky.addColorStop(1, '#1b2a5c');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, y0);
+    const at = phi => [cx + R * Math.sin(phi * D2R), cy - R * Math.cos(phi * D2R)];
+    // 별이 지나가는 길 (동 → 서)
+    ctx.strokeStyle = 'rgba(255,211,77,.35)'; ctx.lineWidth = 3; ctx.setLineDash([8, 7]); ctx.beginPath();
+    for (let p = -48; p <= 48; p += 2) { const q = at(p); if (p === -48) ctx.moveTo(q[0], q[1]); else ctx.lineTo(q[0], q[1]); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const drawOri = (phi, color, alpha) => {
+      const c = at(phi), r = phi * D2R;
+      const pts = ORI.map(([x, y]) => [c[0] + (x * Math.cos(r) - y * Math.sin(r)) * sc, c[1] + (x * Math.sin(r) + y * Math.cos(r)) * sc]);
+      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.beginPath();
+      ORIL.forEach(([i, j]) => { ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); }); ctx.stroke();
+      ctx.fillStyle = color; pts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 3.6, 0, Math.PI * 2); ctx.fill(); });
+      ctx.globalAlpha = 1;
+      return c;
+    };
+    const day = S.smode === 'day', labels = day ? S_TIME : S_DATE, n = Math.floor(S.s + 1e-6);
+    for (let k = 0; k <= Math.min(4, n); k++) {
+      const c = drawOri(-30 + 15 * k, k === n && S.s - n < 1e-3 ? '#ffffff' : '#9fb3e8', k === n && S.s - n < 1e-3 ? 1 : 0.55);
+      tag(labels[k] + (day ? '' : ' 밤 9시'), [c[0], c[1] + 62 * sc], { size: 14, bg: 'rgba(8,14,40,.8)', fg: day ? '#ffd34d' : '#7cc4ff' });
+    }
+    if (S.s - n > 1e-3) drawOri(-30 + 15 * S.s, '#ffffff', 1);
+    for (let k = 0; k < Math.min(4, n); k++) { const p = at(-30 + 15 * k + 4), q = at(-30 + 15 * k + 11); head([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2 - 70 * sc], q[0] - p[0], q[1] - p[1], 15, day ? '#ffd34d' : '#7cc4ff'); }
+    ctx.fillStyle = '#18301f'; ctx.fillRect(0, y0, W, H - y0);
+    tag('남', [cx, y0 + 24], { size: 24, bg: '#ff8a3d', fg: '#fff' });
+    tag('← 동', [50, y0 + 24], { size: 18, bg: '#ff8a3d', fg: '#fff' });
+    tag('서 →', [W - 50, y0 + 24], { size: 18, bg: '#ff8a3d', fg: '#fff' });
+    tag(day ? '일주 운동: 같은 날 1시간마다 15°씩 동 → 서 (지구의 자전)' : '연주 운동: 같은 시각, 하루에 약 1°씩 (15일에 약 15°) 동 → 서 (지구의 공전)', [W / 2, H - 22], { size: 16, bg: day ? '#ffd34d' : '#7cc4ff', fg: '#06142b' });
+  }
+
+  let hudTxt = '';
+  function hud() {
+    let s;
+    if (S.view === 'orbit') {
+      const m = ((Math.floor(S.t) % 12) + 12) % 12 + 1, day = Math.min(30, Math.floor((S.t - Math.floor(S.t)) * 30) + 1);
+      s = `📅 ${m}월 ${day}일`;
+      if (S.hudAns) s += ` · 태양이 지나는 별자리: ${sunZ(m)} · 한밤중 남쪽 하늘: ${nightZ(m)}`;
+    } else if (S.view === 'south') {
+      const k = Math.min(4, Math.floor(S.s + 1e-6));
+      s = S.smode === 'day' ? `⏱ 같은 날 1시간 간격 · ${S_TIME[k]} · 남쪽 하늘의 오리온자리` : S.smode === 'year' ? `📅 15일 간격, 매번 밤 9시 · ${S_DATE[k]} · 남쪽 하늘의 오리온자리` : `☀ 15일 간격 · ${S_DATE[k]} · 별자리 사이의 태양 위치`;
+    } else {
+      s = S.wmode === 'single' ? `📅 8월 ${Math.floor(clamp(S.d, 1, 31))}일 · 해가 진 직후 서쪽 하늘` : `🔁 15일 간격 그림 3장(투명 종이)을 ${S.wmode === 'sun' ? '태양' : '사자자리'} 기준으로 겹쳐요`;
+    }
+    if (s !== hudTxt) hudEl.textContent = hudTxt = s;
+  }
+
+  let last = 0;
+  function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
+    if (!el.isConnected || !W) return;
+    if (S.view === 'orbit') {
+      const t1 = S.t;
+      if (S.goal != null) { S.t = Math.min(S.goal, S.t + S.rate * dt); if (S.t >= S.goal - 1e-9) { S.t = S.goal; S.goal = null; if (hooks.change) setTimeout(() => hooks.change('goal')); } }
+      else if (S.playing) S.t += SPEEDS[S.frame === 'sun' ? 0 : S.speed] * dt; // 화면이 함께 돌 때는 어지럽지 않게 느리게
+      const adv = S.t - t1;
+      if (adv > 0) { const key = 'orbit-' + S.cam, was = watch[key] || 0; watch[key] = was + adv; if (was < 3 && watch[key] >= 3 && hooks.watch) setTimeout(() => hooks.watch(key)); }
+      S.fb = clamp(S.fb + (S.frame === 'sun' ? dt : -dt) / 0.8, 0, 1);
+      orbitG.rotation.y = rotDeg() * D2R;
+      arrA.visible = arrB.visible = S.fb === 0; // 화면이 함께 돌 때는 공전 방향 화살표가 헷갈려서 숨겨요
+      earthG.position.copy(ring(RO, S.t * 30 + 180));
+      controls.update();
+    } else if (S.view === 'south') {
+      if (S.playing) { S.s += 0.7 * dt; if (S.s >= 4) { S.s = 4; S.playing = false; if (hooks.change) setTimeout(() => hooks.change('south')); } }
+    } else {
+      if (S.ovRun && S.ov < 1) { S.ov = Math.min(1, S.ov + dt / 2); if (S.ov >= 1) { S.ovRun = false; if (hooks.change) setTimeout(() => hooks.change('overlay')); } }
+      if (S.playing) { S.d += 6 * dt; if (S.d >= 31) { S.d = 31; S.playing = false; if (hooks.change) setTimeout(() => hooks.change('west')); } }
+    }
+    renderer.setClearColor(0x050914);
+    renderer.render(scene, camera);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+    camera.updateMatrixWorld(); orbitG.updateMatrixWorld();
+    M.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).multiply(orbitG.matrixWorld); // 띠 좌표 그대로 화면에 찍어요
+    if (S.view === 'orbit') drawOrbit(); else if (S.view === 'south') drawSouth(); else drawWest();
+    hud();
+  }
+  applyView(); preset();
+  requestAnimationFrame(loop);
+  return { ok: true, el, S, watch, hooks, set, play, step, reset, preset, trailReset, playWest, overlayAgain };
+})();
+
+/* ───────── 수업 모드 ───────── */
+const TABS = [
+  { name: '① 지구의 공전', title: '🌍 지구의 공전과 태양의 연주 운동', setup: { view: 'orbit', cam: 'oblique', t: 2.5, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false },
+    lines: ['지구가 [태양]을 중심으로 [1년]에 한 바퀴씩 도는 운동', '공전 방향: [서] → [동] (북극 위에서 보면 [시계 반대] 방향, 자전 방향과 같아요)', '공전 속도: 하루에 약 [1]° (360° ÷ 365일)', '[태양의 연주 운동]: 지구의 공전 때문에 태양이 별자리 사이를 [서] → [동]으로 이동하여 [1년] 후 처음 위치로 돌아오는 것처럼 보이는 운동', '지구가 1 → 2 → 3으로 공전하면, 천구에서 태양은 1′ → 2′ → 3′으로 보여요.', '태양이 실제로 움직이는 것이 아니라 [지구]가 공전해서 생기는 [겉보기] 운동이에요.'],
+    ask: '<b>따라가 봐요</b> +1달을 한 번씩 누르며 지구(1, 2, 3…)가 움직일 때, 별자리 띠에서 태양(1′, 2′, 3′…)이 어느 쪽으로 옮겨 가는지 손가락으로 따라가 보세요.' },
+  { name: '② 태양과 별자리의 위치 변화', title: '🌇 해가 진 직후 서쪽 하늘 (15일 간격)', setup: { view: 'west', wmode: 'single', d: 1 },
+    lines: ['태양을 기준으로 별자리는 [동] → [서]로 이동해요. (별의 연주 운동)', '별자리를 기준으로 태양은 [서] → [동]으로 이동해요. (태양의 연주 운동)', '하루에 약 [1]°씩 이동해서 [1년] 후 처음 위치로 돌아와요.', '실제로 움직인 것은 [지구]예요. 연주 운동은 [겉보기] 운동이에요.', '<b>왜 방향이 반대일까?</b> 같은 움직임을 [기준]만 바꿔 본 것이에요. 태양이 별자리 사이를 서 → 동으로 옮겨 가면, 태양을 기준으로 볼 때는 별자리가 [동] → [서]로 밀려나는 것처럼 보여요.'],
+    ask: '<b>먼저 예측!</b> 8월 1일 해가 진 직후 사자자리가 보였어요. 8월 31일 같은 시각에는 어디에 있을까요?<br><b>기차 비유</b> 기차가 앞으로 가면(태양: 서 → 동) 기차 안에서 본 바깥 나무는 뒤로 가는 것처럼 보이죠(별자리: 동 → 서)? 무엇을 기준으로 보느냐에 따라 방향이 반대가 돼요.<br><b>모형으로 확인</b> 탭 ①에서 🔄 태양 기준을 누르면 지구 → 태양 방향이 고정되고, 별자리가 동 → 서로 옮겨 가는 것을 볼 수 있어요.' },
+  { name: '③ 황도와 계절별 별자리', title: '♈ 황도 12궁과 계절별 별자리', setup: { view: 'orbit', cam: 'oblique', sunLine: true, nightLine: true, trail: true, hudAns: true },
+    lines: ['[황도]: 태양이 연주 운동하면서 별자리 사이를 지나가는 길', '[황도 12궁]: 황도에 있는 12개의 별자리', '태양 쪽 별자리는 [낮]에 떠 있어서 보이지 않아요.', '태양 [반대쪽] 별자리가 한밤중에 남쪽 하늘에서 보여요. ([6]개월 차이)', '띠에 적힌 "3월"은 [3월]에 태양이 그 별자리(물병자리) 쪽에 있다는 뜻이에요. 그래서 3월 밤에는 물병자리가 [보이지 않아요].', '3월 한밤중에는 6개월 뒤 "[9월]" 별자리인 [사자자리]가 남쪽 하늘에 보여요.', '<b>지구 위치로 몇 월인지 찾기</b>: 지구에서 [태양] 쪽으로 선을 이어 닿는 별자리의 달이 그때예요. 태양 [반대]쪽으로 이어 닿는 별자리는 그때 한밤중에 보여요.','3월 물병 → [사자] · 6월 황소 → [전갈] · 9월 사자 → [물병] · 12월 전갈 → [황소]'],
+    ask: '<b>생각해요</b> 내 생일 달의 별자리(탄생 별자리)를 생일 밤에 볼 수 있을까요?' },
+  { name: '④ 일주 운동 vs 연주 운동', title: '⚖️ 일주 운동과 연주 운동 비교', setup: { view: 'south', smode: 'day', playing: true },
+    lines: ['별의 일주 운동: [동] → [서], 1시간에 [15]°, 원인은 지구의 [자전]', '별의 연주 운동: [동] → [서], 하루에 약 [1]°, 원인은 지구의 [공전]', '태양의 연주 운동: [서] → [동], 하루에 약 [1]°, 원인은 지구의 [공전]', '별의 연주 운동과 태양의 연주 운동은 같은 현상을 기준만 바꿔 본 것이라 방향이 [반대]예요.'],
+    ask: '<b>비교해요</b> 남쪽 하늘의 오리온자리를 ⏱ 같은 날 1시간 간격으로 볼 때와 📅 15일 간격으로 같은 시각(밤 9시)에 볼 때를 번갈아 재생해 보세요. 방향은 같고, 15°를 움직이는 데 걸리는 시간이 1시간 vs 15일이에요.<br><b>그리고</b> ☀ 태양의 연주 운동을 재생해 보세요. 별자리를 기준으로 태양은 반대로 서 → 동(오른쪽 → 왼쪽)으로 옮겨 가요.' }
+];
+
+/* ───────── 탐사 모드 문제 (모든 학생이 같은 문제) ───────── */
+const M1Q = [
+  { s: '지구가 ___을 중심으로 도는 운동을 지구의 공전이라고 해요.', o: ['태양', '달', '자전축'], a: 0, h: '모형의 가운데에 무엇이 있나요?' },
+  { s: '지구는 ___에 한 바퀴씩 공전해요.', o: ['하루', '한 달', '1년'], a: 2, h: '날짜가 1월부터 12월까지 지나는 동안 몇 바퀴 도나요?' },
+  { s: '지구의 공전 방향은 ___이에요.', o: ['서 → 동', '동 → 서'], a: 0, h: '자전 방향과 같아요.' },
+  { s: '북극 위에서 내려다보면 지구는 태양 주위를 ___으로 돌아요.', o: ['시계 방향', '시계 반대 방향'], a: 1, h: '⬇️ 위에서 보기로 바꾸고 재생해 보세요.' },
+  { s: '지구는 하루에 약 ___씩 공전해요.', o: ['1°', '15°', '30°'], a: 0, h: '360° ÷ 365일을 생각해 보세요.' },
+  { s: '지구의 공전으로 나타나는 현상은 ___이에요.', o: ['태양의 연주 운동', '낮과 밤의 반복', '별의 일주 운동'], a: 0, h: '낮과 밤, 일주 운동은 자전 때문에 생겨요.' }
+];
+const M2Q = [
+  { s: '태양을 기준으로 할 때 별자리는 ___으로 이동해요.', o: ['동 → 서', '서 → 동'], a: 0, h: '"태양 기준 겹치기"에서 사자자리가 어느 쪽으로 가나요? (오른쪽 아래 = 서쪽 지평선 쪽)' },
+  { s: '별자리를 기준으로 할 때 태양은 ___으로 이동해요.', o: ['서 → 동', '동 → 서'], a: 0, h: '"별자리 기준 겹치기"에서 태양이 어느 쪽으로 가나요?' },
+  { s: '태양, 별자리, 지구 중 실제로 움직인 것은 ___예요.', o: ['태양', '별자리', '지구'], a: 2, h: '1차시에서 하늘이 도는 것처럼 보였던 까닭을 떠올려 보세요.' },
+  { s: '지구의 공전 때문에 태양이 별자리 사이를 이동하는 것처럼 보이는 운동을 태양의 ___ 운동이라고 해요.', o: ['일주', '연주'], a: 1, h: '1년을 주기로 일어나요.' },
+  { s: '태양의 연주 운동 방향은 지구의 공전 방향과 ___.', o: ['같아요', '반대예요'], a: 0, h: '지구의 공전 방향과 태양의 연주 운동 방향이 각각 무엇이었는지 떠올려 보세요.' },
+  { s: '태양은 별자리 사이를 하루에 약 ___씩 이동해서 1년 후 처음 위치로 돌아와요.', o: ['1°', '15°', '30°'], a: 0, h: '지구의 공전 속도와 같아요.' }
+];
+const M2P = { s: '8월 1일 해가 진 직후 서쪽 하늘에 사자자리가 보여요. 8월 31일 같은 시각에는 사자자리가 어디에 보일까요?', o: ['더 높은 곳 (동쪽 하늘 쪽)', '더 낮은 곳 (서쪽 지평선 쪽)', '같은 자리'], a: 1,
+  ex: '날마다 약 1°씩 서쪽 지평선 쪽으로 내려가서, 8월 31일에는 태양과 함께 져요. 태양을 기준으로 별자리가 동 → 서로 이동한 거예요.' };
+const M3M = [3, 6, 9, 12];
+const M3Q = [
+  { s: '민호의 생일은 5월이고 탄생 별자리는 양자리예요. 생일 한밤중에 남쪽 하늘에서 잘 보이는 별자리는 ___예요.', o: ['양자리', '천칭자리', '황소자리', '물고기자리'], a: 1, h: '태어난 달의 별자리는 태양 쪽이라 안 보여요. 6개월 뒤의 별자리를 찾아보세요.', ex: '5월에 태양은 양자리를 지나요. 한밤중에는 6개월 뒤 별자리인 천칭자리(11월)가 보여요.' },
+  { s: '한밤중에 남쪽 하늘에서 염소자리가 보이는 때는 ___이에요.', o: ['2월', '5월', '8월', '11월'], a: 2, h: '염소자리는 2월 별자리예요. 6개월 차이를 생각해 보세요.', ex: '염소자리(2월)가 태양 반대쪽에 있으려면 태양은 게자리(8월)를 지나야 해요.' },
+  { s: '어느 날 한밤중 남쪽 하늘에서 사자자리를 보았어요. 두 달 후 한밤중 남쪽 하늘에 보이는 별자리는 ___예요.', o: ['게자리', '처녀자리', '천칭자리', '전갈자리'], a: 2, h: '한 달에 별자리 하나씩 옮겨 가요. 어느 방향으로 옮겨 가나요?', ex: '태양이 한 달에 별자리 하나씩 서 → 동으로 옮겨 가므로 한밤중 별자리도 사자 → 처녀 → 천칭으로 바뀌어요.' },
+  { s: '10월에 태양이 지나는 별자리는 ___예요.', o: ['사자자리', '처녀자리', '물고기자리', '천칭자리'], a: 1, h: '모형에서 10월로 옮겨 태양 쪽 선을 보세요.', ex: '10월에 태양은 처녀자리를 지나고, 한밤중에는 반대쪽 물고기자리가 보여요.' },
+  { fig: 'pos', s: '그림은 북극 위에서 내려다본 지구의 공전 궤도와 황도 12궁이에요. 지구가 A에 있을 때 태양이 지나는 별자리는 ___예요.', o: ['궁수자리', '쌍둥이자리', '물고기자리', '처녀자리'], a: 0, h: '지구 A에서 태양 쪽으로 선을 그어 별자리 띠까지 이어 보세요.', ex: '지구 A에서 태양 쪽으로 이은 선이 궁수자리에 닿아요.' },
+  { s: '위 그림에서 지구가 A에 있을 때는 ___이에요.', o: ['1월', '4월', '7월', '10월'], a: 0, h: '태양이 지나는 별자리가 몇 월 별자리인지 띠에서 보세요.', ex: '태양이 궁수자리(1월)를 지나므로 1월이에요. 모형을 ⬇️ 위에서 보기로 바꾸고 1월을 눌러 지구 위치를 비교해 보세요.' },
+  { s: '위 그림에서 지구가 B에 있을 때 한밤중 남쪽 하늘에서 보이는 별자리는 ___예요.', o: ['물고기자리', '처녀자리', '쌍둥이자리', '궁수자리'], a: 1, h: '한밤중에는 태양 반대쪽을 봐요. 지구 B에서 태양 반대쪽으로 선을 그어 보세요.', ex: 'B는 4월(태양: 물고기자리)이고, 태양 반대쪽 처녀자리가 한밤중 남쪽 하늘에 보여요.' },
+  { s: '위 그림에서 한밤중 남쪽 하늘에 쌍둥이자리가 보일 때 지구의 위치는 ___예요.', o: ['A', 'B', 'C', 'D'], a: 0, h: '쌍둥이자리가 태양 반대쪽에 있으려면 지구가 태양과 쌍둥이자리 사이에 있어야 해요.', ex: '지구가 A에 있으면 태양 반대쪽에 쌍둥이자리가 있어요. (1월 한밤중 → 쌍둥이자리)' }
+];
+const QUIZ = [
+  { s: '지구의 공전에 대한 설명으로 옳은 것은?', o: ['하루에 약 15°씩 공전한다.', '태양을 중심으로 1년에 한 바퀴씩 서 → 동으로 공전한다.', '한 달에 한 바퀴씩 공전한다.', '공전 때문에 천체의 일주 운동이 나타난다.'], a: 1, ex: '지구는 태양을 중심으로 1년에 한 바퀴, 하루에 약 1°씩 서 → 동으로 공전해요. 일주 운동은 자전 때문이에요.' },
+  { s: '천체의 운동 방향을 옳게 짝지은 것은?', o: ['지구의 자전: 동 → 서', '지구의 공전: 서 → 동', '별의 일주 운동: 서 → 동', '태양의 연주 운동: 동 → 서'], a: 1, ex: '자전·공전·태양의 연주 운동은 서 → 동, 별의 일주 운동은 동 → 서예요.' },
+  { s: '태양의 연주 운동 방향과 지구의 공전 방향은?', o: ['같다', '반대이다'], a: 0, h: '지구의 공전 방향과 태양의 연주 운동 방향을 각각 떠올려 보세요.', ex: '태양의 연주 운동은 지구의 공전 때문에 생기고, 방향도 공전과 같은 서 → 동이에요.' },
+  { s: '태양을 기준으로 할 때 별자리가 이동하는 방향(별의 연주 운동)은?', o: ['동 → 서', '서 → 동'], a: 0, ex: '해가 진 직후 서쪽 하늘의 별자리는 날마다 서쪽 지평선 쪽으로 내려가요. 동 → 서 방향이에요.' },
+  { fig: 'order', s: '그림은 15일 간격으로 해가 진 직후 서쪽 하늘을 순서 없이 나타낸 것이에요. 관측한 순서로 옳은 것은?', o: ['(가) → (나) → (다)', '(나) → (가) → (다)', '(다) → (가) → (나)'], a: 1, h: '천칭자리가 날이 갈수록 어느 쪽으로 가는지 생각해 보세요.', ex: '태양을 기준으로 별자리는 동 → 서로 이동하므로, 천칭자리가 높은 (나)부터 낮은 (다) 순서예요.' },
+  { s: '태양은 별자리 사이를 하루에 약 몇 °씩 이동할까요?', o: ['1°', '15°', '30°'], a: 0, ex: '360° ÷ 365일 ≒ 1°. 지구의 공전 속도와 같아요.' },
+  { s: '별의 일주 운동과 연주 운동의 속도를 옳게 짝지은 것은?', o: ['일주: 1시간에 15° / 연주: 하루에 약 1°', '일주: 하루에 약 1° / 연주: 1시간에 15°', '둘 다 1시간에 15°'], a: 0, ex: '일주 운동은 자전 때문(1시간에 15°), 연주 운동은 공전 때문(하루에 약 1°)이에요.' },
+  { fig: 'zod', s: '그림은 북극 위에서 본 황도 12궁이에요. 태양이 게자리를 지날 때(8월) 한밤중에 남쪽 하늘에서 보이는 별자리는?', o: ['게자리', '염소자리', '물병자리', '사자자리'], a: 1, h: '6개월 뒤 별자리예요.', ex: '태양 반대쪽(6개월 뒤) 별자리인 염소자리(2월)가 보여요.' },
+  { fig: 'zod', s: '그림을 보고 답해요. 4월 한밤중에 남쪽 하늘에서 볼 수 있는 별자리는?', o: ['물고기자리', '처녀자리', '천칭자리', '양자리'], a: 1, h: '4월에 태양은 물고기자리를 지나요.', ex: '4월에 태양은 물고기자리를 지나고, 반대쪽 처녀자리(10월)가 한밤중 남쪽 하늘에 보여요.' },
+  { s: '태양 쪽 별자리와 한밤중 남쪽 하늘의 별자리는 몇 개월 차이일까요?', o: ['3개월', '6개월', '12개월'], a: 1, ex: '두 별자리는 지구를 사이에 두고 정반대에 있어서 6개월 차이예요.' },
+  { s: '"황도"에 대한 설명으로 옳은 것은?', o: ['태양이 연주 운동하면서 별자리 사이를 지나가는 길', '지구의 자전축을 늘인 선', '별이 일주 운동하는 길'], a: 0, ex: '황도는 태양이 별자리 사이를 지나가는 길이고, 황도에 있는 12개 별자리가 황도 12궁이에요.' },
+  { s: '지구에서 볼 때 별자리가 1년을 주기로 바뀌는 까닭은?', o: ['지구가 자전하기 때문', '지구가 공전하기 때문', '별자리가 실제로 움직이기 때문'], a: 1, ex: '지구가 공전하면서 태양이 보이는 위치가 바뀌고, 그래서 밤하늘의 별자리도 계절마다 달라져요.' },
+  { fig: 'pos2', s: '그림은 북극 위에서 내려다본 지구의 공전 궤도와 황도 12궁이에요. 지구가 (가)에 있을 때에 대한 설명으로 옳은 것은?', o: ['2월이고, 태양이 염소자리를 지난다.', '2월이고, 태양이 게자리를 지난다.', '8월이고, 태양이 염소자리를 지난다.', '8월이고, 태양이 게자리를 지난다.'], a: 0, h: '지구 (가)에서 태양 쪽으로 선을 이어 띠에 닿는 별자리를 찾아요.', ex: '(가)에서 태양 쪽으로 이은 선이 염소자리(2월)에 닿아요. 이때 한밤중에는 반대쪽 게자리가 보여요.' },
+  { s: '위 그림에서 지구가 (나)에 있을 때 한밤중에 남쪽 하늘에서 보이는 별자리는?', o: ['양자리', '천칭자리', '게자리', '염소자리'], a: 1, h: '한밤중에는 태양 반대쪽 별자리가 보여요.', ex: '(나)는 5월(태양: 양자리)이에요. 태양 반대쪽 천칭자리가 한밤중 남쪽 하늘에 보여요.' }
+];
+
+/* ───────── 그림 ───────── */
+const svgText = (x, y, t, o) => `<text x="${x}" y="${y}" fill="${(o && o.c) || '#eef2ff'}" font-size="${(o && o.s) || 15}" font-family="Do Hyeon, Noto Sans KR, sans-serif" text-anchor="${(o && o.a) || 'middle'}">${t}</text>`;
+function figOrder() {
+  // (가) 중간, (나) 높이, (다) 낮게 — 태양 기준으로 별자리가 동→서(서쪽 지평선 쪽)로 내려가요
+  const libra = [[0, 0], [22, -6], [34, -30], [12, -38], [-14, -26]], L = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2]];
+  const panel = (x, name, oy) => {
+    const ox = x + 70, base = 150;
+    const pts = libra.map(([a, b]) => [ox + a, base - oy + b]);
+    return `<rect x="${x}" y="10" width="140" height="170" rx="8" fill="#2a3360"/><rect x="${x}" y="150" width="140" height="30" fill="#3a2f26"/>
+<circle cx="${x + 110}" cy="160" r="9" fill="#ffd34d"/>${svgText(x + 110, 176, '태양', { s: 11 })}${svgText(x + 128, 145, '서', { s: 12, c: '#ff9ac8' })}
+${L.map(([i, j]) => `<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${pts[j][0]}" y2="${pts[j][1]}" stroke="#fff" stroke-width="1.4"/>`).join('')}${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#fff"/>`).join('')}
+${svgText(ox + 4, base - oy - 46, '천칭자리', { s: 12 })}${svgText(x + 70, 200, name, { s: 15 })}`;
+  };
+  return `<svg class="fig" viewBox="0 0 470 210" role="img" aria-label="해가 진 직후 서쪽 하늘의 천칭자리 높이가 다른 그림 세 장">
+<rect width="470" height="210" fill="#0d1838"/>${panel(10, '(가)', 40)}${panel(165, '(나)', 68)}${panel(320, '(다)', 8)}</svg>`;
+}
+// 북극 위에서 본 공전 궤도와 황도 12궁에 지구 위치(기호)를 찍은 그림 — 3D 모형을 ⬇️ 위에서 본 모습과 같은 배치예요
+// marks: [[기호, 지구 각도]], arc: 공전 방향 화살표의 [시작, 끝] 각도. 달 m의 지구는 (m-1)×30+15+180°에 있어요.
+function figPos(marks, arc) {
+  const c = 230, pt = (deg, r) => [c + r * Math.cos(deg * D2R), c - r * Math.sin(deg * D2R)];
+  const f = n => n.toFixed(1);
+  let s = `<svg class="fig sq" viewBox="0 0 460 460" role="img" aria-label="북극 위에서 본 지구의 공전 궤도와 황도 12궁${marks.length ? ', 지구 위치 ' + marks.map(m => m[0]).join(', ') : ''}"><rect width="460" height="460" fill="#0d1838"/>
+<circle cx="${c}" cy="${c}" r="180" fill="none" stroke="#1d3a8a" stroke-width="70" opacity=".7"/>`;
+  for (let i = 0; i < 12; i++) {
+    const [x1, y1] = pt(i * 30, 145), [x2, y2] = pt(i * 30, 215), [x, y] = pt(i * 30 + 15, 180);
+    s += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#ffa64d" stroke-opacity=".45"/>` + svgText(f(x), f(y - 4), `${i + 1}월`, { s: 12, c: '#ffd9a8' }) + svgText(f(x), f(y + 13), ZOD[i], { s: 14 });
+  }
+  s += `<circle cx="${c}" cy="${c}" r="82" fill="none" stroke="#9fc4ff" stroke-opacity=".7" stroke-width="2"/>`;
+  const pts = []; for (let k = 0; k <= 12; k++) pts.push(pt(arc[0] + (arc[1] - arc[0]) * k / 12, 82));
+  const a1 = arc[1] * D2R, tx = -Math.sin(a1), ty = -Math.cos(a1), [ex, ey] = pts[12];
+  s += `<polyline points="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}" fill="none" stroke="#7cc4ff" stroke-width="4"/>
+<polygon points="${f(ex + tx * 9)},${f(ey + ty * 9)} ${f(ex - tx * 5 - ty * 7)},${f(ey - ty * 5 + tx * 7)} ${f(ex - tx * 5 + ty * 7)},${f(ey - ty * 5 - tx * 7)}" fill="#7cc4ff"/>`;
+  const [ax, ay] = pt((arc[0] + arc[1]) / 2, 62); s += svgText(f(ax), f(ay + 4), '공전', { s: 12, c: '#7cc4ff' });
+  s += `<circle cx="${c}" cy="${c}" r="20" fill="#ffc93c"/>` + svgText(c, c + 5, '태양', { s: 13, c: '#2a1c00' });
+  marks.forEach(([name, deg]) => {
+    const [x, y] = pt(deg, 82), [lx, ly] = pt(deg, 110);
+    s += `<circle cx="${f(x)}" cy="${f(y)}" r="10" fill="#3f86d6" stroke="#bfe0ff" stroke-width="2"/>` + svgText(f(lx), f(ly + 6), name, { s: 18, c: '#7ce0a0' });
+  });
+  return s + '</svg>';
+}
+const FIGS = { order: figOrder, zod: () => figPos([], [240, 270]),pos: () => figPos([['A', 195], ['B', 285], ['C', 15], ['D', 105]], [45, 75]), pos2: () => figPos([['(가)', 225], ['(나)', 315], ['(다)', 45], ['(라)', 135]], [75, 105]) };
+
+/* ───────── 저장 ───────── */
+const KEY = 'annual-motion-v1';
+const fresh = () => ({ view: 'intro', num: '', name: '', code: '', m1: { seen: {}, q: {} }, m2: { seen: {}, q: {}, pred: null }, m3: { cur: 3, s: {}, q: {} }, m4: { q: {} }, sentSig: '', sent: false });
+let state = fresh();
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.m1) state = Object.assign(fresh(), s, { view: 'intro' }); } catch (e) {}
+const ui = { tab: 0, rev: {}, fb: {}, server: null, teacher: null, submitMsg: '' };
+let syncTimer = null;
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} clearTimeout(syncTimer); syncTimer = setTimeout(sync, 1500); }
+
+const QS = { m1: [M1Q, () => state.m1.q], m2: [M2Q, () => state.m2.q], m3: [M3Q, () => state.m3.q], m4: [QUIZ, () => state.m4.q] };
+const qDone = (qs, rec) => qs.every((q, i) => rec[i] && rec[i].ok);
+const okCount = (qs, rec) => qs.filter((q, i) => rec[i] && rec[i].ok).length;
+const firstOk = (qs, rec) => qs.filter((q, i) => rec[i] && rec[i].ok && !rec[i].no.length).length;
+const CHECK = {
+  m1: [['orbit-top', '⬇️ 위에서(북극 위) 보며 3달 이상 공전시켜 보기'], ['orbit-oblique', '🔭 비스듬히 보며 3달 이상 공전시켜 보기']],
+  m2: [['west-sun', '🔁 태양 기준 겹치기 보기'], ['west-star', '🔁 별자리 기준 겹치기 보기']]
+};
+const seenAll = m => (m !== 'm1' || Stage.ok) ? CHECK[m].every(([k]) => state[m].seen[k]) : true;
+const m2PredOk = () => !!(state.m2.pred && state.m2.pred.ok);
+const tblOk = (m, k) => !!(state.m3.s[m] && state.m3.s[m][k] && state.m3.s[m][k].ok);
+const tblDone = () => M3M.every(m => tblOk(m, 'sun') && tblOk(m, 'night'));
+const MISSIONS = [
+  { v: 'm1', t: '임무 1. 지구의 공전', d: '태양 주위를 도는 지구를 위와 옆에서 보며 공전 방향과 속도, 태양의 연주 운동을 찾아요.', done: () => qDone(M1Q, state.m1.q) },
+  { v: 'm2', t: '임무 2. 태양과 별자리의 위치 변화', d: '해가 진 직후 서쪽 하늘을 15일 간격으로 겹쳐 보며 연주 운동을 찾아요.', done: () => m2PredOk() && qDone(M2Q, state.m2.q) },
+  { v: 'm3', t: '임무 3. 계절별 별자리', d: '모형에서 3·6·9·12월 태양 쪽 별자리와 한밤중 별자리를 찾아 표를 채우고, 지구 위치로 몇 월인지 찾아요.', done: () => tblDone() && qDone(M3Q, state.m3.q) },
+  { v: 'm4', t: '임무 4. 확인 퀴즈', d: '형성평가 14문제로 배운 내용을 정리해요.', done: () => qDone(QUIZ, state.m4.q) }
+];
+const unlocked = i => i === 0 || MISSIONS[i - 1].done();
+
+/* ───────── 화면 조각 ───────── */
+const on = c => c ? ' on' : '';
+function grp(label, act, items, cur, cls) {
+  return `<span class="group${cls ? ' ' + cls : ''}"><span class="lbl">${label}</span>${items.map(([v, t]) => `<button class="chip${on(cur(v))}" data-act="${act}" data-v="${v}">${t}</button>`).join('')}</span>`;
+}
+function ctrls(o) {
+  o = o || {};
+  const S = Stage.S;
+  if (S.view === 'west') {
+    return `<div class="ctrl">${grp('보기', 'wmode', [['single', '📅 날짜별로 보기'], ['sun', '🔁 태양 기준 겹치기'], ['star', '🔁 별자리 기준 겹치기']], v => S.wmode === v)}</div>
+${S.wmode === 'single' ? `<div class="ctrl"><button class="chip big${S.playing ? '' : ' play'}" data-act="play">${S.playing ? '⏸ 멈춤' : '▶ 8월 1일부터 재생'}</button>${grp('날짜', 'day', [[1, '8월 1일'], [16, '8월 16일'], [31, '8월 31일']], v => Math.round(S.d) === v && !S.playing)}</div>`
+  : `<div class="ctrl"><button class="chip big play" data-act="overlay"${S.ovRun ? ' disabled' : ''}>${S.ov >= 1 ? '↺ 다시 나란히 펼치기' : S.ovRun ? '겹치는 중…' : `👉 ${S.wmode === 'sun' ? '태양을' : '사자자리를'} 맞춰 겹치기`}</button></div>`}`;
+  }
+  if (S.view === 'south') {
+    return `<div class="ctrl">${grp('비교', 'smode', [['day', '⏱ 별의 일주 운동: 같은 날 1시간 간격'], ['year', '📅 별의 연주 운동: 같은 시각 15일 간격'], ['sun', '☀ 태양의 연주 운동: 별자리 기준 15일 간격']], v => S.smode === v)}</div>
+<div class="ctrl"><button class="chip big${S.playing ? '' : ' play'}" data-act="play">${S.playing ? '⏸ 멈춤' : '▶ 재생'}</button><button class="chip" data-act="reset">↺ 처음으로</button></div>`;
+  }
+  let h = `<div class="ctrl"><button class="chip big${S.playing ? '' : ' play'}" data-act="play">${S.playing ? '⏸ 멈춤' : '▶ 재생'}</button>
+<button class="chip" data-act="step" data-v="0.5">+15일</button><button class="chip" data-act="step" data-v="1">+1달</button><button class="chip" data-act="restart">↺ 처음부터</button>
+${grp('빠르기', 'spd', [[0, '느리게'], [1, '보통'], [2, '빠르게']], v => S.speed === v)}${grp('보는 곳', 'cam', [['oblique', '🔭 비스듬히'], ['top', '⬇️ 위에서']], v => S.cam === v)}</div>`;
+  if (S.simple && state.view === 'class') h += `<div class="ctrl">${grp('기준', 'frame', [['star', '⭐ 별자리 기준 (태양의 연주 운동)'], ['sun', '🔄 태양 기준 (별의 연주 운동)']], v => S.frame === v)}</div>`;
+  if (o.months !== false) h +=`<div class="ctrl">${grp('달', 'month', Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}월`]), v => Math.floor(S.t) % 12 + 1 === v, 'months')}</div>`;
+  if (o.tog !== false) h += `<div class="ctrl">${grp('보기', 'tog', [['sunLine', '☀ 태양 쪽 선'], ['nightLine', '🌙 한밤중 선'], ['trail', '✨ 태양의 겉보기 자취']], k => S[k])}</div>`;
+  return h;
+}
+function fill(str, key) {
+  let n = 0;
+  return str.replace(/\[(.+?)\]/g, (m, w) => { const k = key + '-' + (n++), show = ui.rev[k]; return `<button class="blank${show ? ' show' : ''}" data-act="reveal" data-k="${k}">${w}</button>`; });
+}
+function qList(m, locked) {
+  const [qs, recf] = QS[m], rec = recf();
+  return qs.map((q, i) => {
+    const r = rec[i] || { no: [] }, f = ui.fb[m + i];
+    const s = esc(q.s).replace('___', `<span class="blank${r.ok ? ' ok' : ''}">${r.ok ? esc(q.o[q.a]) : '?'}</span>`);
+    return `<div class="q${locked ? ' locked' : ''}">${q.fig ? FIGS[q.fig]() : ''}<div class="s">${i + 1}. ${s}</div>
+<div class="opts">${q.o.map((o, j) => `<button class="opt${r.no.includes(j) ? ' no' : ''}${r.ok && j === q.a ? ' sel' : ''}" data-act="ans" data-m="${m}" data-i="${i}" data-j="${j}"${locked || r.ok ? ' disabled' : ''}>${esc(o)}</button>`).join('')}</div>
+${f && !r.ok ? `<div class="fb bad">${f}</div>` : ''}${r.ok ? `<div class="fb ok">${r.no.length ? '✔ 맞아요!' : '🎯 한 번에 정답!'}</div>${q.ex ? `<div class="fb ex">💡 ${esc(q.ex)}</div>` : ''}` : ''}</div>`;
+  }).join('');
+}
+function checklist(m) {
+  const okAll = m === 'm1' && !Stage.ok;
+  return `<ul class="check">${CHECK[m].map(([k, t]) => { const ok = okAll || state[m].seen[k]; return `<li class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${t}</li>`; }).join('')}</ul>`;
+}
+function doneBox(i) {
+  const next = MISSIONS[i + 1];
+  return `<div class="done"><b>🏅 ${MISSIONS[i].t} 완료!</b>${next ? `<button class="btn small" data-act="enter" data-v="${next.v}">다음 임무 →</button>` : '<button class="btn small" data-act="enter" data-v="cert">결과 보기 →</button>'}</div>`;
+}
+function mTop(title) {
+  return `<div class="top"><button class="btn ghost small" data-act="enter" data-v="map">← 임무 목록</button><span class="title" style="font-size:24px">${title}</span><span class="grow"></span><span class="pill">🧑‍🚀 <b>${esc(state.num)} ${esc(state.name)}</b></span></div>`;
+}
+
+/* ───────── 화면 ───────── */
+function viewIntro() {
+  const form = state.num
+    ? `<p><b>${esc(state.num)} ${esc(state.name)}</b> 대원, 이어서 할까요?</p><div class="row"><button class="btn" data-act="enter" data-v="map">이어서 하기</button><button class="btn ghost small" data-act="wipe">다른 사람으로 시작</button></div>`
+    : `<label for="num">학번</label><input id="num" inputmode="numeric" maxlength="6" placeholder="예: 10312" autocomplete="off">
+<label for="name">이름</label><input id="name" maxlength="12" placeholder="이름" autocomplete="off">
+${CONFIG.SUBMIT_URL ? '<label for="ccode">수업 코드</label><input id="ccode" maxlength="30" placeholder="선생님이 알려 준 코드" autocomplete="off">' : ''}
+<div class="row" style="margin-top:12px"><button class="btn" data-act="start">탐사 시작</button></div><p id="introMsg" class="fb bad"></p>`;
+  return `<section class="intro"><div><div class="stage-slot"></div><p class="note">지구가 태양 주위를 돌면, 태양이 별자리 사이를 옮겨 가는 것처럼 보여요. 화면을 끌어서 돌려 보세요.</p></div>
+<div class="intro-r"><p class="kicker">Ⅲ. 태양계 · 2. 지구의 운동 · 공전과 연주 운동</p><h1>♈ 별자리 달력 관측소</h1>
+<p class="lead">지구의 <b>공전</b>과 태양의 <b>연주 운동</b>, 그리고 <b>계절별 별자리</b>가 바뀌는 까닭을 모형으로 찾아요.</p>
+<div class="panel"><h3>👩‍🏫 수업 모드</h3><p class="muted">선생님과 함께 큰 화면으로 살펴봐요.</p><button class="btn" data-act="enter" data-v="class">수업 모드 열기</button></div>
+<div class="panel"><h3>🧑‍🚀 탐사 모드</h3><p class="muted">혼자서 관찰하고 예측하는 임무 4개예요.</p>${form}</div>
+${CONFIG.SUBMIT_URL ? '<div style="text-align:right"><button class="btn ghost small" data-act="teacher">👩‍🏫 교사용</button></div>' : ''}</div></section>`;
+}
+function viewClass() {
+  const T = TABS[ui.tab];
+  return `<div class="top"><span class="title" style="font-size:26px">👩‍🏫 수업 모드</span><div class="tabs">${TABS.map((t, i) => `<button class="tab${on(i === ui.tab)}" data-act="tab" data-i="${i}">${t.name}</button>`).join('')}</div><span class="grow"></span><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
+<div class="cl-stage"><div class="stage-slot"></div>${ctrls()}</div>
+<section class="panel concept big"><div class="row"><h3 style="flex:1">${T.title}</h3><button class="btn ghost small" data-act="revall">${T.lines.every((l, i) => fill(l, ui.tab + '-' + i).indexOf('blank"') < 0) ? '빈칸 가리기' : '빈칸 모두 보기'}</button></div>
+<ol>${T.lines.map((l, i) => `<li>${fill(l, ui.tab + '-' + i)}</li>`).join('')}</ol>
+<div class="ask">💬 ${T.ask}</div><p class="note">빈칸을 누르면 하나씩 답이 보여요. (학습지 10~12쪽)</p></section>`;
+}
+function viewMap() {
+  const n = MISSIONS.filter(m => m.done()).length;
+  return `<div class="top"><span class="title" style="font-size:26px">🧑‍🚀 탐사 임무</span><span class="pill">진행 <b>${n}/4</b></span><span class="grow"></span><span class="pill">🧑‍🚀 <b>${esc(state.num)} ${esc(state.name)}</b></span><button class="btn ghost small" data-act="enter" data-v="cert">📋 결과</button><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
+<div class="mcards">${MISSIONS.map((m, i) => { const ok = unlocked(i), d = m.done(); return `<section class="panel mcard${ok ? '' : ' lock'}"><span class="n">${d ? '<span class="st-done">✔ 완료</span>' : ok ? '도전 가능' : '🔒 앞 임무를 먼저 마쳐요'}</span><h3>${m.t}</h3><p class="muted">${m.d}</p><div class="row"><button class="btn${d ? ' ghost' : ''} small" data-act="enter" data-v="${m.v}"${ok ? '' : ' disabled'}>${d ? '다시 보기' : '시작'}</button></div></section>`; }).join('')}</div>
+${MISSIONS.every(m => m.done()) ? '<div class="done"><b>🎉 모든 임무를 마쳤어요!</b><button class="btn small" data-act="enter" data-v="cert">결과 보기 →</button></div>' : ''}`;
+}
+function missionPage(i, title, side, ctrlOpts) {
+  return mTop(title) + `<div class="lesson"><div><div class="stage-slot"></div>${ctrls(ctrlOpts)}</div><aside class="panel">${side}${MISSIONS[i].done() ? doneBox(i) : ''}</aside></div>`;
+}
+function viewM1() {
+  const ok = seenAll('m1');
+  return missionPage(0, '🌍 임무 1. 지구의 공전', `<h3>🔭 관찰하기</h3><p class="muted">+1달을 한 번씩 눌러 지구를 공전시켜 보세요. 가운데가 태양, 파란 원이 공전 궤도, 바깥 띠는 천구의 별자리(배경)예요.</p>${checklist('m1')}
+<div class="boxq"><b>☀ 태양의 연주 운동</b><br>지구가 <b>1 → 2 → 3</b>으로 공전하면, 지구에서 본 태양은 뒤쪽 별자리 사이를 <b>1′ → 2′ → 3′</b>으로 옮겨 가는 것처럼 보여요.
+<ul style="margin:6px 0 0 18px;padding:0"><li>방향: 별자리 사이를 <b>서 → 동</b> (지구의 공전 방향과 같아요)</li><li>빠르기: 하루에 약 <b>1°</b>, <b>1년</b> 뒤 처음 자리로 돌아와요</li><li>태양이 실제로 움직이는 것이 아니라 <b>지구가 공전해서</b> 생기는 <b>겉보기 운동</b>이에요</li></ul>
+<p class="muted" style="margin-top:6px">이렇게 지구의 공전 때문에 태양이 별자리 사이를 1년에 한 바퀴 도는 것처럼 보이는 운동을 <b>태양의 연주 운동</b>이라고 해요. ↺ 처음부터를 누르고 1′, 2′, 3′을 손가락으로 따라가 보세요.</p></div>
+<h3>📝 탐사 보고서</h3>${ok ? '' : '<p class="fb bad">관찰을 먼저 마치면 문제를 풀 수 있어요.</p>'}${qList('m1', !ok)}`, { tog: false });
+}
+function viewM2() {
+  const p = state.m2.pred || { no: [] }, f = ui.fb.pred, ok = m2PredOk() && seenAll('m2');
+  const pred = `<div class="boxq"><b>🔮 먼저 예측!</b> ${esc(M2P.s)}
+<div class="opts">${M2P.o.map((o, j) => `<button class="opt${p.no.includes(j) ? ' no' : ''}${p.ok && j === M2P.a ? ' sel' : ''}" data-act="pred" data-j="${j}"${p.ok ? ' disabled' : ''}>${esc(o)}</button>`).join('')}</div>
+${f ? `<div class="fb ${f.ok ? 'ok' : 'bad'}">${f.msg}</div>` : ''}${p.ok ? `<div class="fb ex">💡 ${esc(M2P.ex)}</div>` : ''}</div>`;
+  return missionPage(1, '🌇 임무 2. 태양과 별자리의 위치 변화', `<h3>🔭 관찰하기</h3><p class="muted">8월에 해가 진 직후 서쪽 하늘을 본 모습이에요. 예측을 고르면 8월 1일부터 31일까지 이어서 보여 줘요.</p>${pred}
+${m2PredOk() ? checklist('m2') : ''}
+<h3>📝 탐사 보고서</h3>${ok ? '' : '<p class="fb bad">예측하고, 겹치기 두 가지를 모두 보면 문제를 풀 수 있어요.</p>'}${qList('m2', !ok)}`);
+}
+// 문제 풀 때 펼쳐 보는 별자리 찾기 요령 (표의 답인 '한밤중 별자리'는 직접 적지 않아요)
+function tipBox() {
+  return `<details class="tip"${ui.tipOpen ? ' open' : ''}><summary>💡 별자리 찾기 요령 (눌러서 펼치기)</summary><ol>
+<li><b>띠의 'n월' 별자리</b> = n월에 <b>태양이 지나는</b> 별자리예요. 낮에 태양과 함께 떠 있어서 <b>그달 밤에는 안 보여요.</b></li>
+<li><b>한밤중 남쪽 하늘</b>에는 태양 <b>반대쪽</b> 별자리가 보여요. 띠에서 정반대 = <b>6개월 뒤 달</b>의 별자리예요. (예: 1월 한밤중 → '7월' 별자리)</li>
+<li><b>거꾸로 찾기</b>: ○○자리가 한밤중에 보이는 달 = ○○자리의 달에서 <b>6개월</b> 차이 나는 달이에요.</li>
+<li><b>지구 위치 그림</b>: 지구 → <b>태양 쪽</b>으로 선을 이어 닿는 별자리의 달이 '그때'예요. 지구 → 태양 <b>반대쪽</b>으로 이어 닿는 별자리가 그때 한밤중에 보여요. (지구 바로 뒤의 별자리를 그달로 착각하지 않기!)</li>
+<li><b>시간이 지나면</b>: 태양은 한 달에 별자리 하나씩 <b>다음 달 별자리 쪽(서 → 동)</b>으로 옮겨 가요. 그래서 한밤중 별자리도 한 달에 하나씩 다음 달 별자리로 바뀌어요.</li>
+<li><b>계절별 한밤중 별자리</b>: 봄(3월) 사자자리 · 여름(6월) 전갈자리 · 가을(9월) 물병자리 · 겨울(12월) 황소자리</li>
+</ol><div class="ztbl">${ZOD.map((z, i) => `<span><b>${i + 1}월</b>${z.replace('자리', '')}</span>`).join('')}</div>
+<p class="muted" style="margin:6px 0 0">황도 12궁: 그 달에 태양이 지나는 별자리</p></details>`;
+}
+function viewM3() {
+  const cur = state.m3.cur, s = state.m3.s[cur] || {};
+  const pills = `<div class="steps">${M3M.map(m => `<button class="stp${on(m === cur)}${tblOk(m, 'sun') && tblOk(m, 'night') ? ' ok' : ''}" data-act="m3go" data-v="${m}">${m}월</button>`).join('')}</div>`;
+  const row = (k, label, ans) => {
+    const r = s[k] || { no: [] }, f = ui.fb['t' + k];
+    return `<p style="margin-top:10px"><b>${label}</b> ${r.ok ? `<span class="blank ok">${ans}</span>` : '<span class="blank">?</span>'}</p>
+<div class="opts zod">${ZOD.map((z, j) => `<button class="opt${r.no.includes(j) ? ' no' : ''}${r.ok && z === ans ? ' sel' : ''}" data-act="tbl" data-k="${k}" data-j="${j}"${r.ok ? ' disabled' : ''}>${z}</button>`).join('')}</div>
+${f && !r.ok ? `<div class="fb bad">${f}</div>` : ''}`;
+  };
+  const table = `<h3>📋 ${cur}월에 지구가 있을 때</h3><p class="muted">모형에서 주황 선(태양 쪽)과 파란 선(태양 반대쪽)이 띠의 어느 별자리에 닿는지 보세요.</p>
+${row('sun', '☀ 태양 쪽 별자리 (안 보임):', sunZ(cur))}${row('night', '🌙 한밤중 남쪽 하늘의 별자리:', nightZ(cur))}
+${tblOk(cur, 'sun') && tblOk(cur, 'night') && M3M.indexOf(cur) < 3 ? `<div class="row" style="margin-top:10px"><button class="btn small" data-act="m3go" data-v="${M3M[M3M.indexOf(cur) + 1]}">다음: ${M3M[M3M.indexOf(cur) + 1]}월 →</button></div>` : ''}`;
+  const td = tblDone();
+  const sum = td ? `<div class="fb ex">💡 태양 쪽 별자리와 한밤중 별자리는 띠에서 정반대, 곧 <b>6개월 차이</b>예요. (3월 물병 ↔ 사자, 6월 황소 ↔ 전갈, 9월 사자 ↔ 물병, 12월 전갈 ↔ 황소)</div>` : '';
+  return missionPage(2, '♈ 임무 3. 계절별 별자리', `${pills}${table}${sum}
+<h3 style="margin-top:14px">🧠 적용 문제</h3>${td ? tipBox() : ''}${td ?'<p class="muted">모형에서 달을 바꿔 가며 풀어도 돼요. 그림 문제는 모형을 ⬇️ 위에서 보기로 바꾸면 그림과 같은 모습이에요.</p>' : '<p class="fb bad">표를 모두 채우면 문제를 풀 수 있어요.</p>'}${qList('m3', !td)}`, { tog: false });
+}
+function viewM4() {
+  const [qs, recf] = QS.m4, rec = recf();
+  return mTop('📝 임무 4. 확인 퀴즈') + `<p class="muted">모두 ${qs.length}문제예요. 틀리면 힌트를 보고 다시 골라요. 처음 고른 답이 정답인 문제 수가 기록돼요. (지금 ${okCount(qs, rec)}/${qs.length})</p>${tipBox()}
+<div class="quiz">${qList('m4', false).split('<div class="q').slice(1).map(x => `<section class="panel"><div class="q${x}</section>`).join('')}</div>${MISSIONS[3].done() ? doneBox(3) : ''}`;
+}
+function tblFirst() { let n = 0; M3M.forEach(m => ['sun', 'night'].forEach(k => { const r = (state.m3.s[m] || {})[k]; if (r && r.ok && !r.no.length) n++; })); return n; }
+function scoreRows() {
+  return [
+    ['임무 1. 지구의 공전', MISSIONS[0].done() ? `완료 · 한 번에 맞힘 ${firstOk(M1Q, state.m1.q)}/${M1Q.length}` : '진행 중'],
+    ['임무 2. 태양과 별자리', MISSIONS[1].done() ? `완료 · 예측 ${state.m2.pred && !state.m2.pred.no.length ? '성공' : '다시 고름'}, 한 번에 맞힘 ${firstOk(M2Q, state.m2.q)}/${M2Q.length}` : '진행 중'],
+    ['임무 3. 계절별 별자리', MISSIONS[2].done() ? `완료 · 표 한 번에 ${tblFirst()}/8, 적용 문제 ${firstOk(M3Q, state.m3.q)}/${M3Q.length}` : '진행 중'],
+    ['임무 4. 확인 퀴즈', MISSIONS[3].done() ? `완료 · 한 번에 맞힘 ${firstOk(QUIZ, state.m4.q)}/${QUIZ.length}` : '진행 중']
+  ];
+}
+function viewCert() {
+  return `<div class="top"><button class="btn ghost small" data-act="enter" data-v="map">← 임무 목록</button><span class="title" style="font-size:26px">📋 탐사 결과</span></div>
+<section class="panel" style="max-width:640px"><h3>🧑‍🚀 ${esc(state.num)} ${esc(state.name)}</h3>
+<dl class="score">${scoreRows().map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+${CONFIG.SUBMIT_URL ? `<p class="muted">진행 상황은 임무를 풀 때마다 선생님께 자동으로 보내져요.</p><div class="row"><button class="btn" data-act="submit">📤 지금 선생님께 보내기</button></div>${ui.submitMsg ? `<p class="fb">${ui.submitMsg}</p>` : ''}` : '<p class="muted">이 화면을 캡처해서 제출하세요.</p>'}
+<p class="note">여러 학생이 함께 쓰는 기기라면, 다 마친 뒤 기록을 지워 주세요. <button class="btn ghost small" data-act="wipe">🗑 이 기기에서 내 기록 지우기</button></p></section>`;
+}
+
+/* ───────── 교사 화면 (교사 코드는 Apps Script에서만 확인) ───────── */
+function viewTeacher() {
+  const T = ui.teacher || (ui.teacher = { data: null, code: '', msg: '', cls: '' });
+  const head = `<div class="top"><span class="title" style="font-size:24px">👩‍🏫 교사 화면 · 연주운동</span><span class="grow"></span>${T.data ? '<button class="btn ghost small" data-act="tload">🔄 새로고침</button>' : ''}<button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>`;
+  if (!T.data) return head + `<section class="panel" style="max-width:440px"><h3>교사 코드 입력</h3>
+<div class="row"><input id="tcode" type="password" maxlength="30" placeholder="교사 코드" autocomplete="off" style="flex:1;min-width:160px"><button class="btn" data-act="tload">결과 보기</button></div>
+${T.msg ? `<p class="fb ${T.msg.startsWith('불러') ? '' : 'bad'}">${T.msg}</p>` : ''}</section>`;
+  const { headers, rows } = T.data;
+  const iNum = headers.indexOf('학번'), iTime = headers.indexOf('마지막 활동');
+  const cls = r => { const n = String(r[iNum] || ''); return n.length > 2 ? n.slice(0, -2) : ''; };
+  const clsName = c => c.length === 3 ? `${c[0]}학년 ${+c.slice(1)}반` : c;
+  const classes = [...new Set(rows.map(cls))].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
+  const list = rows.filter(r => !T.cls || cls(r) === T.cls).sort((a, b) => String(a[iNum]).localeCompare(String(b[iNum]), 'ko', { numeric: true }));
+  const order = headers.map((h, i) => i).filter(i => i !== iTime).concat(iTime >= 0 ? [iTime] : []);
+  const mi = headers.map((h, i) => h.startsWith('임무') ? i : -1).filter(i => i >= 0);
+  const cell = v => v === '완료' ? '<span class="tok">✔ 완료</span>' : v === '-' || v === '' ? '<span class="muted">–</span>' : esc(v);
+  return head + `<div class="row"><button class="btn small${T.cls ? ' ghost' : ''}" data-act="tcls" data-c="">전체</button>${classes.map(c => `<button class="btn small${T.cls === c ? '' : ' ghost'}" data-act="tcls" data-c="${esc(c)}">${clsName(c)}</button>`).join('')}</div>
+<div class="tstats"><div>참여 학생<b>${list.length}명</b></div>${mi.map(i => `<div>${esc(headers[i])} 완료<b>${list.filter(r => r[i] === '완료').length}명</b></div>`).join('')}</div>
+<section class="panel"><div class="tbl-wrap"><table class="ttbl"><thead><tr>${order.map(i => `<th>${esc(headers[i])}</th>`).join('')}</tr></thead><tbody>
+${list.length ? list.map(r => `<tr>${order.map(i => `<td>${i === iTime ? `<small>${esc(r[i])}</small>` : cell(r[i])}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${order.length}" class="muted" style="text-align:center">아직 참여한 학생이 없어요.</td></tr>`}
+</tbody></table></div><p class="note">"한 번에"는 처음 고른 답이 정답이었던 문제 수예요. 학번 앞 3자리로 반을 나눠요. (예: 10312 → 1학년 3반)</p></section>`;
+}
+async function teacherLoad() {
+  const T = ui.teacher, inp = document.getElementById('tcode');
+  if (inp) T.code = inp.value.trim();
+  if (!T.code) { T.msg = '교사 코드를 입력해 주세요.'; render(); return; }
+  T.msg = '불러오는 중…'; render();
+  try {
+    if (!(await hello())) { T.msg = 'Apps Script가 아직 예전 버전이에요. 일주운동 폴더의 apps-script.gs로 바꾸고 새 버전으로 배포해 주세요.'; render(); return; }
+    const out = await post({ lesson: CONFIG.LESSON, action: 'list', teacher: T.code });
+    if (out.ok) { T.data = { headers: out.headers || [], rows: out.rows || [] }; T.msg = ''; }
+    else T.msg = out.error === 'teacher' ? '교사 코드가 맞지 않아요.' : '결과를 불러오지 못했어요.';
+  } catch (err) { T.msg = '인터넷 연결을 확인해 주세요.'; }
+  render();
+}
+
+/* ───────── 그리기 ───────── */
+const app = document.getElementById('app');
+const VIEWS = { intro: viewIntro, class: viewClass, map: viewMap, m1: viewM1, m2: viewM2, m3: viewM3, m4: viewM4, cert: viewCert, teacher: viewTeacher };
+function render() {
+  app.innerHTML = (VIEWS[state.view] || viewIntro)();
+  const slot = app.querySelector('.stage-slot'); if (slot) slot.replaceWith(Stage.el);
+}
+function tabSetup() {
+  Stage.set(Object.assign({ playing: false, t: 2.5, speed: 1, marks: false, simple: false, frame: 'star', fb: 0 }, TABS[ui.tab].setup));
+  Stage.preset();
+}
+function m3Setup() {
+  Stage.set({ view: 'orbit', cam: 'oblique', t: state.m3.cur - 1 + 0.5, playing: false, sunLine: true, nightLine: true, trail: false, marks: false, hudAns: false });
+  Stage.preset();
+}
+function enter(v) {
+  if (['map', 'm1', 'm2', 'm3', 'm4', 'cert'].includes(v) && !state.num) v = 'intro';
+  const i = MISSIONS.findIndex(m => m.v === v);
+  if (i > 0 && !unlocked(i)) v = 'map';
+  state.view = v; ui.fb = {}; ui.submitMsg = ''; Object.assign(Stage.S, { simple: false, frame: 'star', fb: 0 });
+  if (CHECK[v]) CHECK[v].forEach(([k]) => { delete Stage.watch[k]; });
+  if (v === 'intro') { Stage.set({ view: 'orbit', cam: 'oblique', playing: true, speed: 1, sunLine: true, nightLine: true, trail: false, marks: false, hudAns: true }); Stage.preset(); }
+  if (v === 'class') tabSetup();
+  if (v === 'm1') { Stage.set({ view: 'orbit', cam: 'top', t: 2.5, playing: false, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false }); Stage.preset(); }
+  if (v === 'm2') Stage.set({ view: 'west', wmode: 'single', d: 1, playing: false });
+  if (v === 'm3') m3Setup();
+  save(); render(); window.scrollTo(0, 0);
+}
+Stage.hooks.watch = k => {
+  if (state.view === 'm1' && CHECK.m1.some(([kk]) => kk === k) && !state.m1.seen[k]) { state.m1.seen[k] = true; save(); render(); }
+};
+// 답을 고를 때마다 화면을 다시 그리므로, 요령 상자를 펼친 상태를 기억해 둬요
+app.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('tip')) ui.tipOpen = e.target.open; }, true);
+Stage.hooks.change = () => { if (Stage.el.isConnected) render(); };
+
+/* ───────── 동작 ───────── */
+app.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+  const a = t.dataset.act, v = t.dataset.v, S = Stage.S;
+  if (a === 'enter') enter(v);
+  else if (a === 'tab') { ui.tab = +t.dataset.i; tabSetup(); render(); }
+  else if (a === 'reveal') { ui.rev[t.dataset.k] = !ui.rev[t.dataset.k]; render(); }
+  else if (a === 'revall') {
+    const T = TABS[ui.tab], keys = [];
+    T.lines.forEach((l, i) => { let n = 0; l.replace(/\[(.+?)\]/g, () => keys.push(ui.tab + '-' + i + '-' + (n++))); });
+    const show = !keys.every(k => ui.rev[k]); keys.forEach(k => { ui.rev[k] = show; }); render();
+  }
+  else if (a === 'play') { Stage.play(); render(); }
+  else if (a === 'step') { Stage.step(+v); render(); }
+  else if (a === 'spd') { Stage.set({ speed: +v }); render(); }
+  else if (a === 'cam') { Stage.set({ cam: v }); render(); }
+  else if (a === 'frame') { Stage.set({ frame: v, playing: false, goal: null }); render(); }
+  else if (a === 'month') { Stage.set({ t: +v - 1 + 0.5, playing: false }); render(); }
+  else if (a === 'tog') { Stage.set({ [v]: !S[v] }); if (v === 'trail') Stage.trailReset(); render(); }
+  else if (a === 'wmode') {
+    Stage.set({ wmode: v, playing: false });
+    if (state.view === 'm2' && m2PredOk() && (v === 'sun' || v === 'star') && !state.m2.seen['west-' + v]) { state.m2.seen['west-' + v] = true; save(); }
+    render();
+  }
+  else if (a === 'day') { Stage.set({ d: +v, playing: false }); render(); }
+  else if (a === 'overlay') { Stage.overlayAgain(); render(); }
+  // 처음부터: 수업 모드는 그 탭의 처음 모습으로, 임무에서는 지금 날짜에서 번호·자취만 지우고 다시 시작
+  else if (a === 'restart') { if (state.view === 'class') { const f = S.frame, b = S.fb; tabSetup(); Stage.set({ frame: f, fb: b }); } else if (state.view === 'm3') m3Setup(); else if (state.view === 'm1') Stage.set({ t: 2.5, playing: false }); else Stage.set({ t: Math.floor(S.t), playing: false }); render(); }
+  else if (a === 'smode') { Stage.set({ smode: v, playing: true }); render(); }
+  else if (a === 'reset') { Stage.reset(); render(); }
+  else if (a === 'start') startMission(t);
+  else if (a === 'wipe') {
+    if (confirm('이 기기에 저장된 탐사 기록을 모두 지울까요? (선생님께 보낸 결과는 지워지지 않아요)')) {
+      state = fresh(); try { localStorage.removeItem(KEY); } catch (err) {} enter('intro');
+    }
+  }
+  else if (a === 'ans') {
+    const m = t.dataset.m, i = +t.dataset.i, j = +t.dataset.j, [qs, recf] = QS[m], rec = recf(), q = qs[i];
+    if ((m === 'm1' || m === 'm2') && !seenAll(m)) return;
+    if (m === 'm2' && !m2PredOk()) return;
+    if (m === 'm3' && !tblDone()) return;
+    const r = rec[i] || (rec[i] = { no: [] }); if (r.ok) return;
+    if (j === q.a) { r.ok = true; ui.fb[m + i] = ''; }
+    else { if (!r.no.includes(j)) r.no.push(j); ui.fb[m + i] = `🔎 다시 생각해 봐요.${q.h ? ' ' + esc(q.h) : ''}`; }
+    save(); render();
+  }
+  else if (a === 'pred') {
+    const p = state.m2.pred || (state.m2.pred = { no: [] }), j = +t.dataset.j; if (p.ok) return;
+    if (j === M2P.a) { p.ok = true; ui.fb.pred = { ok: true, msg: p.no.length ? '✔ 맞아요! 직접 보고 찾았어요.' : '🎯 예측 성공! 화면에서 확인해 보세요.' }; }
+    else { if (!p.no.includes(j)) p.no.push(j); ui.fb.pred = { ok: false, msg: '🤔 예측과 실제를 비교해 보세요. 사자자리가 날마다 어디로 가는지 보고 다시 골라요.' }; }
+    Stage.set({ view: 'west', wmode: 'single' }); Stage.playWest();
+    save(); render();
+  }
+  else if (a === 'm3go') { state.m3.cur = +v; ui.fb = {}; m3Setup(); save(); render(); }
+  else if (a === 'tbl') {
+    const m = state.m3.cur, k = t.dataset.k, j = +t.dataset.j, s = state.m3.s[m] || (state.m3.s[m] = {}), r = s[k] || (s[k] = { no: [] });
+    if (r.ok) return;
+    const ans = k === 'sun' ? sunZ(m) : nightZ(m);
+    if (ZOD[j] === ans) { r.ok = true; ui.fb['t' + k] = ''; }
+    else { if (!r.no.includes(j)) r.no.push(j); ui.fb['t' + k] = k === 'sun' ? '🔎 주황 선이 띠에 닿는 별자리를 보세요.' : '🔎 파란 선(태양 반대쪽)이 띠에 닿는 별자리를 보세요.'; }
+    save(); render();
+  }
+  else if (a === 'teacher') { ui.teacher = null; state.view = 'teacher'; render(); }
+  else if (a === 'tload') teacherLoad();
+  else if (a === 'tcls') { ui.teacher.cls = t.dataset.c; render(); }
+  else if (a === 'submit') submit();
+});
+async function startMission(btn) {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const num = val('num'), name = val('name'), msg = document.getElementById('introMsg');
+  if (!num || !name) { msg.textContent = '학번과 이름을 모두 입력해 주세요.'; return; }
+  if (CONFIG.SUBMIT_URL) {
+    const code = val('ccode');
+    if (!code) { msg.textContent = '수업 코드도 입력해 주세요.'; return; }
+    msg.textContent = '수업 코드를 확인하는 중…'; btn.disabled = true;
+    try {
+      const out = await post({ lesson: CONFIG.LESSON, action: 'check', code });
+      if (!out.ok) { msg.textContent = '수업 코드가 맞지 않아요. 다시 확인해 주세요.'; btn.disabled = false; return; }
+    } catch (err) { /* 인터넷이 잠시 안 되면 일단 시작하고, 나중에 다시 보내요 */ }
+    state.code = code;
+  }
+  state.num = num; state.name = name;
+  // 선생님 시험용: 학번 00000으로 들어오면 바로 결과(보내기) 화면으로
+  if (num === '00000') { enter('cert'); ui.submitMsg = '🧪 선생님 시험 모드예요. 보내기를 눌러 구글 시트에 줄이 생기는지 확인하세요.'; render(); return; }
+  enter('map');
+}
+
+/* ───────── 선생님께 진행 상황 보내기 (시트 '연주운동 현황' 탭, 학생 한 명당 한 줄) ───────── */
+async function post(body) {
+  const res = await fetch(CONFIG.SUBMIT_URL, { method: 'POST', body: JSON.stringify(body) });
+  return res.json();
+}
+async function hello() {
+  if (ui.server != null) return ui.server;
+  const out = await post({ action: 'hello' });
+  ui.server = !!(out && out.lessons);
+  return ui.server;
+}
+const COLS = ['임무 1 공전', '임무 2 태양과 별자리', '임무 3 계절별 별자리', '임무 4 확인 퀴즈', '공전 문제 (한 번에)', '태양·별자리 문제 (한 번에)', '계절별 별자리 (한 번에)', '확인 퀴즈 (한 번에)', '틀린 답'];
+function progressVals() {
+  const stat = (done, a, b) => done ? '완료' : a ? `진행 ${a}/${b}` : '-';
+  const tblCnt = M3M.reduce((n, m) => n + (tblOk(m, 'sun') ? 1 : 0) + (tblOk(m, 'night') ? 1 : 0), 0);
+  const wrong = [];
+  if (state.m2.pred && state.m2.pred.no.length) wrong.push('예측: ' + state.m2.pred.no.map(j => M2P.o[j]).join(', '));
+  M3M.forEach(m => ['sun', 'night'].forEach(k => { const r = (state.m3.s[m] || {})[k]; if (r && r.no.length) wrong.push(`${m}월 ${k === 'sun' ? '태양 쪽' : '한밤중'}: ${r.no.map(j => ZOD[j]).join(', ')}`); }));
+  return [
+    stat(MISSIONS[0].done(), okCount(M1Q, state.m1.q), M1Q.length), stat(MISSIONS[1].done(), okCount(M2Q, state.m2.q), M2Q.length),
+    stat(MISSIONS[2].done(), tblCnt + okCount(M3Q, state.m3.q), 8 + M3Q.length), stat(MISSIONS[3].done(), okCount(QUIZ, state.m4.q), QUIZ.length),
+    `${firstOk(M1Q, state.m1.q)}/${M1Q.length}`, `${firstOk(M2Q, state.m2.q)}/${M2Q.length}`, `${tblFirst() + firstOk(M3Q, state.m3.q)}/${8 + M3Q.length}`, `${firstOk(QUIZ, state.m4.q)}/${QUIZ.length}`, wrong.join(' / ')
+  ];
+}
+async function sync(force) {
+  if (!CONFIG.SUBMIT_URL || !state.code || !state.num) return null;
+  const vals = progressVals(), sig = [state.num, state.name].concat(vals).join('|');
+  if (!force && sig === state.sentSig) return null;
+  try {
+    if (!(await hello())) return { ok: false, error: 'server' };
+    const out = await post({ lesson: CONFIG.LESSON, action: 'save', code: state.code, num: state.num, name: state.name, cols: COLS, vals });
+    if (out.ok) { state.sentSig = sig; state.sent = true; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+    return out;
+  } catch (err) { return { ok: false, error: 'net' }; }
+}
+async function submit() {
+  if (!state.code) { ui.submitMsg = '수업 코드 없이 시작해서 보낼 수 없어요. 처음 화면에서 다시 시작해 주세요.'; render(); return; }
+  ui.submitMsg = '보내는 중…'; render();
+  const out = await sync(true);
+  ui.submitMsg = out && out.ok ? '✔ 선생님께 보냈어요.' : out && out.error === 'code' ? '수업 코드가 맞지 않아요.' : out && out.error === 'server' ? '아직 결과를 받을 준비가 안 됐어요. 선생님께 알려 주세요. (이 화면을 캡처해서 내도 돼요)' : '인터넷 연결을 확인해 주세요. 계속 안 되면 이 화면을 캡처해서 내세요.';
+  render();
+}
+
+enter('intro');
+</script>
+</body>
+</html>

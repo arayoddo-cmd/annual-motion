@@ -99,6 +99,9 @@ button.blank:not(.show){color:transparent}
 .mcard.lock{opacity:.5}
 .mcard .row{margin-top:auto}
 .st-done{color:var(--ok);font-weight:700}
+.st-retry{color:var(--bad);font-weight:700}
+.retry{background:#3a1c24;border:1px solid var(--bad);border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.retry span{font-size:14px;color:var(--muted)}
 .check{list-style:none;padding:0;margin:6px 0 12px}
 .check li{padding:3px 0}
 .check li.ok{color:var(--ok)}
@@ -810,12 +813,27 @@ const seenAll = m => (m !== 'm1' || Stage.ok) ? CHECK[m].every(([k]) => state[m]
 const m2PredOk = () => !!(state.m2.pred && state.m2.pred.ok);
 const tblOk = (m, k) => !!(state.m3.s[m] && state.m3.s[m][k] && state.m3.s[m][k].ok);
 const tblDone = () => M3M.every(m => tblOk(m, 'sun') && tblOk(m, 'night'));
+function tblFirst() { let n = 0; M3M.forEach(m => ['sun', 'night'].forEach(k => { const r = (state.m3.s[m] || {})[k]; if (r && r.ok && !r.no.length) n++; })); return n; }
+// 임무마다 처음 고른 답이 맞은 개수가 70% 이상이어야 통과해요. 못 넘으면 그 임무를 처음부터 다시 풀어요.
+// 임무 2는 예측 1개 + 보고서, 임무 3은 표 8칸 + 적용 문제를 함께 세요.
+const PASS = 0.7;
+const need = n => Math.ceil(n * PASS - 1e-9);
+const FIN = { m1: () => qDone(M1Q, state.m1.q), m2: () => m2PredOk() && qDone(M2Q, state.m2.q), m3: () => tblDone() && qDone(M3Q, state.m3.q), m4: () => qDone(QUIZ, state.m4.q) };
+const SCORE = {
+  m1: () => [firstOk(M1Q, state.m1.q), M1Q.length],
+  m2: () => [(m2PredOk() && !state.m2.pred.no.length ? 1 : 0) + firstOk(M2Q, state.m2.q), 1 + M2Q.length],
+  m3: () => [tblFirst() + firstOk(M3Q, state.m3.q), M3M.length * 2 + M3Q.length],
+  m4: () => [firstOk(QUIZ, state.m4.q), QUIZ.length]
+};
+const passed = m => { const [a, n] = SCORE[m](); return a >= need(n); };
+const failed = m => FIN[m]() && !passed(m);
 const MISSIONS = [
-  { v: 'm1', t: '임무 1. 지구의 공전', d: '태양 주위를 도는 지구를 위와 옆에서 보며 공전 방향과 속도, 태양의 연주 운동을 찾아요.', done: () => qDone(M1Q, state.m1.q) },
-  { v: 'm2', t: '임무 2. 태양과 별자리의 위치 변화', d: '해가 진 직후 서쪽 하늘을 15일 간격으로 겹쳐 보며 연주 운동을 찾아요.', done: () => m2PredOk() && qDone(M2Q, state.m2.q) },
-  { v: 'm3', t: '임무 3. 계절별 별자리', d: '모형에서 3·6·9·12월 태양 쪽 별자리와 한밤중 별자리를 찾아 표를 채우고, 지구 위치로 몇 월인지 찾아요.', done: () => tblDone() && qDone(M3Q, state.m3.q) },
-  { v: 'm4', t: '임무 4. 확인 퀴즈', d: '형성평가 14문제로 배운 내용을 정리해요.', done: () => qDone(QUIZ, state.m4.q) }
+  { v: 'm1', t: '임무 1. 지구의 공전', d: '태양 주위를 도는 지구를 위와 옆에서 보며 공전 방향과 속도, 태양의 연주 운동을 찾아요.' },
+  { v: 'm2', t: '임무 2. 태양과 별자리의 위치 변화', d: '해가 진 직후 서쪽 하늘을 15일 간격으로 겹쳐 보며 연주 운동을 찾아요.' },
+  { v: 'm3', t: '임무 3. 계절별 별자리', d: '모형에서 3·6·9·12월 태양 쪽 별자리와 한밤중 별자리를 찾아 표를 채우고, 지구 위치로 몇 월인지 찾아요.' },
+  { v: 'm4', t: '임무 4. 확인 퀴즈', d: `형성평가 ${QUIZ.length}문제로 배운 내용을 정리해요.` }
 ];
+MISSIONS.forEach(m => { m.done = () => FIN[m.v]() && passed(m.v); });
 const unlocked = i => i === 0 || MISSIONS[i - 1].done();
 
 /* ───────── 화면 조각 ───────── */
@@ -865,6 +883,16 @@ function doneBox(i) {
   const next = MISSIONS[i + 1];
   return `<div class="done"><b>🏅 ${MISSIONS[i].t} 완료!</b>${next ? `<button class="btn small" data-act="enter" data-v="${next.v}">다음 임무 →</button>` : '<button class="btn small" data-act="enter" data-v="cert">결과 보기 →</button>'}</div>`;
 }
+// 통과 기준 안내 (임무 화면 위쪽)
+function passNote(m) {
+  const [a, n] = SCORE[m]();
+  return `<p class="note">🎯 처음 고른 답이 맞은 것이 <b>${need(n)}개(70%) 이상</b>이어야 통과해요. 지금 ${a}/${n}개${(state[m].tries || 0) ? ` · 재도전 ${state[m].tries}번째` : ''}</p>`;
+}
+function retryBox(m) {
+  const [a, n] = SCORE[m]();
+  return `<div class="retry"><b>😥 처음 고른 답이 맞은 것이 ${a}/${n}개예요. ${need(n)}개(70%) 이상이어야 다음으로 갈 수 있어요.</b><span>틀린 문제의 해설을 다시 읽어 보고, 처음부터 다시 도전해요!</span><button class="btn small" data-act="retry" data-v="${m}">🔁 다시 도전</button></div>`;
+}
+const endBox = (i, m) => MISSIONS[i].done() ? doneBox(i) : failed(m) ? retryBox(m) : '';
 function mTop(title) {
   return `<div class="top"><button class="btn ghost small" data-act="enter" data-v="map">← 임무 목록</button><span class="title" style="font-size:24px">${title}</span><span class="grow"></span><span class="pill">🧑‍🚀 <b>${esc(state.num)} ${esc(state.name)}</b></span></div>`;
 }
@@ -895,11 +923,11 @@ function viewClass() {
 function viewMap() {
   const n = MISSIONS.filter(m => m.done()).length;
   return `<div class="top"><span class="title" style="font-size:26px">🧑‍🚀 탐사 임무</span><span class="pill">진행 <b>${n}/4</b></span><span class="grow"></span><span class="pill">🧑‍🚀 <b>${esc(state.num)} ${esc(state.name)}</b></span><button class="btn ghost small" data-act="enter" data-v="cert">📋 결과</button><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
-<div class="mcards">${MISSIONS.map((m, i) => { const ok = unlocked(i), d = m.done(); return `<section class="panel mcard${ok ? '' : ' lock'}"><span class="n">${d ? '<span class="st-done">✔ 완료</span>' : ok ? '도전 가능' : '🔒 앞 임무를 먼저 마쳐요'}</span><h3>${m.t}</h3><p class="muted">${m.d}</p><div class="row"><button class="btn${d ? ' ghost' : ''} small" data-act="enter" data-v="${m.v}"${ok ? '' : ' disabled'}>${d ? '다시 보기' : '시작'}</button></div></section>`; }).join('')}</div>
+<div class="mcards">${MISSIONS.map((m, i) => { const ok = unlocked(i), d = m.done(); return `<section class="panel mcard${ok ? '' : ' lock'}"><span class="n">${d ? '<span class="st-done">✔ 완료</span>' : failed(m.v) ? '<span class="st-retry">🔁 70%를 넘지 못했어요 · 다시 도전</span>' : ok ? '도전 가능' : '🔒 앞 임무를 먼저 마쳐요'}</span><h3>${m.t}</h3><p class="muted">${m.d}</p><div class="row"><button class="btn${d ? ' ghost' : ''} small" data-act="enter" data-v="${m.v}"${ok ? '' : ' disabled'}>${d ? '다시 보기' : failed(m.v) ? '다시 도전' : '시작'}</button></div></section>`; }).join('')}</div>
 ${MISSIONS.every(m => m.done()) ? '<div class="done"><b>🎉 모든 임무를 마쳤어요!</b><button class="btn small" data-act="enter" data-v="cert">결과 보기 →</button></div>' : ''}`;
 }
 function missionPage(i, title, side, ctrlOpts) {
-  return mTop(title) + `<div class="lesson"><div><div class="stage-slot"></div>${ctrls(ctrlOpts)}</div><aside class="panel">${side}${MISSIONS[i].done() ? doneBox(i) : ''}</aside></div>`;
+  return mTop(title) + `<div class="lesson"><div><div class="stage-slot"></div>${ctrls(ctrlOpts)}</div><aside class="panel">${side}${endBox(i, MISSIONS[i].v)}</aside></div>`;
 }
 function viewM1() {
   const ok = seenAll('m1');
@@ -907,14 +935,14 @@ function viewM1() {
 <div class="boxq"><b>☀ 태양의 연주 운동</b><br>지구가 <b>1 → 2 → 3</b>으로 공전하면, 지구에서 본 태양은 뒤쪽 별자리 사이를 <b>1′ → 2′ → 3′</b>으로 옮겨 가는 것처럼 보여요.
 <ul style="margin:6px 0 0 18px;padding:0"><li>방향: 별자리 사이를 <b>서 → 동</b> (지구의 공전 방향과 같아요)</li><li>빠르기: 하루에 약 <b>1°</b>, <b>1년</b> 뒤 처음 자리로 돌아와요</li><li>태양이 실제로 움직이는 것이 아니라 <b>지구가 공전해서</b> 생기는 <b>겉보기 운동</b>이에요</li></ul>
 <p class="muted" style="margin-top:6px">이렇게 지구의 공전 때문에 태양이 별자리 사이를 1년에 한 바퀴 도는 것처럼 보이는 운동을 <b>태양의 연주 운동</b>이라고 해요. ↺ 처음부터를 누르고 1′, 2′, 3′을 손가락으로 따라가 보세요.</p></div>
-<h3>📝 탐사 보고서</h3>${ok ? '' : '<p class="fb bad">관찰을 먼저 마치면 문제를 풀 수 있어요.</p>'}${qList('m1', !ok)}`, { tog: false });
+<h3>📝 탐사 보고서</h3>${passNote('m1')}${ok ? '' : '<p class="fb bad">관찰을 먼저 마치면 문제를 풀 수 있어요.</p>'}${qList('m1', !ok)}`, { tog: false });
 }
 function viewM2() {
   const p = state.m2.pred || { no: [] }, f = ui.fb.pred, ok = m2PredOk() && seenAll('m2');
   const pred = `<div class="boxq"><b>🔮 먼저 예측!</b> ${esc(M2P.s)}
 <div class="opts">${M2P.o.map((o, j) => `<button class="opt${p.no.includes(j) ? ' no' : ''}${p.ok && j === M2P.a ? ' sel' : ''}" data-act="pred" data-j="${j}"${p.ok ? ' disabled' : ''}>${esc(o)}</button>`).join('')}</div>
 ${f ? `<div class="fb ${f.ok ? 'ok' : 'bad'}">${f.msg}</div>` : ''}${p.ok ? `<div class="fb ex">💡 ${esc(M2P.ex)}</div>` : ''}</div>`;
-  return missionPage(1, '🌇 임무 2. 태양과 별자리의 위치 변화', `<h3>🔭 관찰하기</h3><p class="muted">8월에 해가 진 직후 서쪽 하늘을 본 모습이에요. 예측을 고르면 8월 1일부터 31일까지 이어서 보여 줘요.</p>${pred}
+  return missionPage(1, '🌇 임무 2. 태양과 별자리의 위치 변화', `<h3>🔭 관찰하기</h3><p class="muted">8월에 해가 진 직후 서쪽 하늘을 본 모습이에요. 예측을 고르면 8월 1일부터 31일까지 이어서 보여 줘요.</p>${passNote('m2')}${pred}
 ${m2PredOk() ? checklist('m2') : ''}
 <h3>📝 탐사 보고서</h3>${ok ? '' : '<p class="fb bad">예측하고, 겹치기 두 가지를 모두 보면 문제를 풀 수 있어요.</p>'}${qList('m2', !ok)}`);
 }
@@ -944,22 +972,20 @@ ${row('sun', '☀ 태양 쪽 별자리 (안 보임):', sunZ(cur))}${row('night',
 ${tblOk(cur, 'sun') && tblOk(cur, 'night') && M3M.indexOf(cur) < 3 ? `<div class="row" style="margin-top:10px"><button class="btn small" data-act="m3go" data-v="${M3M[M3M.indexOf(cur) + 1]}">다음: ${M3M[M3M.indexOf(cur) + 1]}월 →</button></div>` : ''}`;
   const td = tblDone();
   const sum = td ? `<div class="fb ex">💡 태양 쪽 별자리와 한밤중 별자리는 띠에서 정반대, 곧 <b>6개월 차이</b>예요. (3월 물병 ↔ 사자, 6월 황소 ↔ 전갈, 9월 사자 ↔ 물병, 12월 전갈 ↔ 황소)</div>` : '';
-  return missionPage(2, '♈ 임무 3. 계절별 별자리', `${pills}${table}${sum}
+  return missionPage(2, '♈ 임무 3. 계절별 별자리', `${pills}${passNote('m3')}${table}${sum}
 <h3 style="margin-top:14px">🧠 적용 문제</h3>${td ? tipBox() : ''}${td ?'<p class="muted">모형에서 달을 바꿔 가며 풀어도 돼요. 그림 문제는 모형을 ⬇️ 위에서 보기로 바꾸면 그림과 같은 모습이에요.</p>' : '<p class="fb bad">표를 모두 채우면 문제를 풀 수 있어요.</p>'}${qList('m3', !td)}`, { tog: false });
 }
 function viewM4() {
   const [qs, recf] = QS.m4, rec = recf();
-  return mTop('📝 임무 4. 확인 퀴즈') + `<p class="muted">모두 ${qs.length}문제예요. 틀리면 힌트를 보고 다시 골라요. 처음 고른 답이 정답인 문제 수가 기록돼요. (지금 ${okCount(qs, rec)}/${qs.length})</p>${tipBox()}
-<div class="quiz">${qList('m4', false).split('<div class="q').slice(1).map(x => `<section class="panel"><div class="q${x}</section>`).join('')}</div>${MISSIONS[3].done() ? doneBox(3) : ''}`;
+  return mTop('📝 임무 4. 확인 퀴즈') + `<p class="muted">모두 ${qs.length}문제예요. 틀리면 힌트를 보고 다시 골라요. 처음 고른 답이 정답인 문제 수가 기록돼요. (지금 ${okCount(qs, rec)}/${qs.length})</p>${passNote('m4')}${tipBox()}
+<div class="quiz">${qList('m4', false).split('<div class="q').slice(1).map(x => `<section class="panel"><div class="q${x}</section>`).join('')}</div>${endBox(3, 'm4')}`;
 }
-function tblFirst() { let n = 0; M3M.forEach(m => ['sun', 'night'].forEach(k => { const r = (state.m3.s[m] || {})[k]; if (r && r.ok && !r.no.length) n++; })); return n; }
 function scoreRows() {
-  return [
-    ['임무 1. 지구의 공전', MISSIONS[0].done() ? `완료 · 한 번에 맞힘 ${firstOk(M1Q, state.m1.q)}/${M1Q.length}` : '진행 중'],
-    ['임무 2. 태양과 별자리', MISSIONS[1].done() ? `완료 · 예측 ${state.m2.pred && !state.m2.pred.no.length ? '성공' : '다시 고름'}, 한 번에 맞힘 ${firstOk(M2Q, state.m2.q)}/${M2Q.length}` : '진행 중'],
-    ['임무 3. 계절별 별자리', MISSIONS[2].done() ? `완료 · 표 한 번에 ${tblFirst()}/8, 적용 문제 ${firstOk(M3Q, state.m3.q)}/${M3Q.length}` : '진행 중'],
-    ['임무 4. 확인 퀴즈', MISSIONS[3].done() ? `완료 · 한 번에 맞힘 ${firstOk(QUIZ, state.m4.q)}/${QUIZ.length}` : '진행 중']
-  ];
+  const detail = { m1: '', m2: ` (예측 ${state.m2.pred && !state.m2.pred.no.length ? '성공' : '다시 고름'})`, m3: ` (표 ${tblFirst()}/8, 적용 문제 ${firstOk(M3Q, state.m3.q)}/${M3Q.length})`, m4: '' };
+  return MISSIONS.map(({ v, t }, i) => {
+    const [a, n] = SCORE[v](), tr = state[v].tries || 0;
+    return [t, MISSIONS[i].done() ? `완료 · 한 번에 맞힘 ${a}/${n}${detail[v]}${tr ? ` · 재도전 ${tr}번` : ''}` : failed(v) ? `재도전 필요 (${a}/${n})` : '진행 중'];
+  });
 }
 function viewCert() {
   return `<div class="top"><button class="btn ghost small" data-act="enter" data-v="map">← 임무 목록</button><span class="title" style="font-size:26px">📋 탐사 결과</span></div>
@@ -1094,6 +1120,14 @@ app.addEventListener('click', async e => {
     save(); render();
   }
   else if (a === 'm3go') { state.m3.cur = +v; ui.fb = {}; m3Setup(); save(); render(); }
+  else if (a === 'retry') {
+    // 70%를 넘지 못한 임무를 처음부터 다시 풀어요 (관찰 체크는 그대로 둬요)
+    const m = v; state[m].tries = (state[m].tries || 0) + 1;
+    if (m === 'm2') Object.assign(state.m2, { q: {}, pred: null });
+    else if (m === 'm3') Object.assign(state.m3, { cur: 3, s: {}, q: {} });
+    else state[m].q = {};
+    ui.fb = {}; enter(m);
+  }
   else if (a === 'tbl') {
     const m = state.m3.cur, k = t.dataset.k, j = +t.dataset.j, s = state.m3.s[m] || (state.m3.s[m] = {}), r = s[k] || (s[k] = { no: [] });
     if (r.ok) return;
@@ -1138,17 +1172,19 @@ async function hello() {
   ui.server = !!(out && out.lessons);
   return ui.server;
 }
-const COLS = ['임무 1 공전', '임무 2 태양과 별자리', '임무 3 계절별 별자리', '임무 4 확인 퀴즈', '공전 문제 (한 번에)', '태양·별자리 문제 (한 번에)', '계절별 별자리 (한 번에)', '확인 퀴즈 (한 번에)', '틀린 답'];
+const COLS = ['임무 1 공전', '임무 2 태양과 별자리', '임무 3 계절별 별자리', '임무 4 확인 퀴즈', '공전 문제 (한 번에)', '태양·별자리 문제 (한 번에)', '계절별 별자리 (한 번에)', '확인 퀴즈 (한 번에)', '틀린 답', '재도전 (임무 1·2·3·4)'];
 function progressVals() {
-  const stat = (done, a, b) => done ? '완료' : a ? `진행 ${a}/${b}` : '-';
+  const MV = ['m1', 'm2', 'm3', 'm4'];
+  const stat = (i, a, b) => MISSIONS[i].done() ? '완료' : failed(MV[i]) ? '재도전 필요' : a ? `진행 ${a}/${b}` : '-';
   const tblCnt = M3M.reduce((n, m) => n + (tblOk(m, 'sun') ? 1 : 0) + (tblOk(m, 'night') ? 1 : 0), 0);
   const wrong = [];
   if (state.m2.pred && state.m2.pred.no.length) wrong.push('예측: ' + state.m2.pred.no.map(j => M2P.o[j]).join(', '));
   M3M.forEach(m => ['sun', 'night'].forEach(k => { const r = (state.m3.s[m] || {})[k]; if (r && r.no.length) wrong.push(`${m}월 ${k === 'sun' ? '태양 쪽' : '한밤중'}: ${r.no.map(j => ZOD[j]).join(', ')}`); }));
   return [
-    stat(MISSIONS[0].done(), okCount(M1Q, state.m1.q), M1Q.length), stat(MISSIONS[1].done(), okCount(M2Q, state.m2.q), M2Q.length),
-    stat(MISSIONS[2].done(), tblCnt + okCount(M3Q, state.m3.q), 8 + M3Q.length), stat(MISSIONS[3].done(), okCount(QUIZ, state.m4.q), QUIZ.length),
-    `${firstOk(M1Q, state.m1.q)}/${M1Q.length}`, `${firstOk(M2Q, state.m2.q)}/${M2Q.length}`, `${tblFirst() + firstOk(M3Q, state.m3.q)}/${8 + M3Q.length}`, `${firstOk(QUIZ, state.m4.q)}/${QUIZ.length}`, wrong.join(' / ')
+    stat(0, okCount(M1Q, state.m1.q), M1Q.length), stat(1, okCount(M2Q, state.m2.q), M2Q.length),
+    stat(2, tblCnt + okCount(M3Q, state.m3.q), 8 + M3Q.length), stat(3, okCount(QUIZ, state.m4.q), QUIZ.length),
+    `${firstOk(M1Q, state.m1.q)}/${M1Q.length}`, `${firstOk(M2Q, state.m2.q)}/${M2Q.length}`, `${tblFirst() + firstOk(M3Q, state.m3.q)}/${8 + M3Q.length}`, `${firstOk(QUIZ, state.m4.q)}/${QUIZ.length}`, wrong.join(' / '),
+    MV.map(m => state[m].tries || 0).join(' · ')
   ];
 }
 async function sync(force) {

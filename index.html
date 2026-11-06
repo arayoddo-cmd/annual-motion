@@ -1225,7 +1225,8 @@ function viewGame() {
     return top + `<section class="panel" style="max-width:760px"><p class="kicker">${G.stage + 1} / ${GST.length}단계</p><h2 class="gq">${s.t}</h2><p class="lead">${s.d}</p>
 ${G.stage === 0 ? `<ul class="glegend"><li>🎯 노란 칸의 별자리가 목표예요.</li><li>🥌 판을 누른 채 끌면 <b>"약 ○달"</b>이 보여요. 손을 떼면 지구가 그만큼 공전해요.</li><li>🔄 지구는 <b>서 → 동(시계 반대 방향)</b>으로만 가요. 지나치면 한 바퀴(1년)를 더 돌아야 해요!</li><li>🥌 목표마다 ${CUR.tries}번까지 튕길 수 있어요. 적게 튕길수록 점수가 커요. 시간 제한은 없어요.</li></ul>
 <label for="bday">🎂 내 생일은 몇 월? (3단계 마지막 목표에 나와요)</label><select id="bday" class="gsel"><option value="">고르지 않음 (친구 생일로)</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}"${b === i + 1 ? ' selected' : ''}>${i + 1}월</option>`).join('')}</select>` : ''}
-<div class="row" style="margin-top:12px"><button class="btn" data-act="gq">${G.stage ? '다음 단계 시작 ▶' : '시작 ▶'}</button></div></section>`;
+<div class="row" style="margin-top:12px"><button class="btn" data-act="gq">${G.stage ? '다음 단계 시작 ▶' : '시작 ▶'}</button></div>
+${tester() ? `<div class="row" style="margin-top:14px;padding-top:12px;border-top:1px dashed #8886;align-items:center"><span class="muted">🔧 선생님 확인용 · 바로 가기</span>${GST.map((x, i) => `<button class="btn ghost" data-act="gjump" data-v="${i}"${i === G.stage ? ' disabled' : ''}>${i + 1}단계</button>`).join('')}</div>` : ''}</section>`;
   }
   if (G.phase === 'win') {
     return top + `<section class="panel" style="max-width:720px;text-align:center"><h2 class="gq">🏆 모든 단계를 마쳤어요!</h2><div class="gbig">${G.score}점</div>
@@ -1469,6 +1470,7 @@ app.addEventListener('click', async e => {
   else if (a === 'gstart') { gNew(); render(); }
   else if (a === 'gq') { const b = document.getElementById('bday'); if (b) { state.game.bday = +b.value || null; save(); } gQ(); }
   else if (a === 'gnext') gNext();
+  else if (a === 'gjump' && tester()) { gNew(); G.stage = +v; render(); }
   else if (a === 'teacher') { ui.teacher = null; state.view = 'teacher'; render(); }
   else if (a === 'tload') teacherLoad();
   else if (a === 'tcls') { ui.teacher.cls = t.dataset.c; render(); }

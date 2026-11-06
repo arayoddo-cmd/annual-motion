@@ -874,7 +874,10 @@ const MISSIONS = [
   { v: 'm4', t: '임무 4. 확인 퀴즈', d: `형성평가 ${QUIZ.length}문제로 배운 내용을 정리해요.` }
 ];
 MISSIONS.forEach(m => { m.done = () => FIN[m.v]() && passed(m.v); });
-const unlocked = i => i === 0 || MISSIONS[i - 1].done();
+// 선생님 시험 모드: 학번 00000으로 들어오면 모든 임무와 게임이 처음부터 열려 있어요
+const tester = () => state.num === '00000';
+const unlocked = i => i === 0 || tester() || MISSIONS[i - 1].done();
+const gameOpen = () => tester() || MISSIONS[3].done();
 
 /* ───────── 화면 조각 ───────── */
 const on = c => c ? ' on' : '';
@@ -963,8 +966,8 @@ function viewClass() {
 function viewMap() {
   const n = MISSIONS.filter(m => m.done()).length;
   return `<div class="top"><span class="title" style="font-size:26px">🧑‍🚀 탐사 임무</span><span class="pill">진행 <b>${n}/4</b></span><span class="grow"></span><span class="pill">🧑‍🚀 <b>${esc(state.num)} ${esc(state.name)}</b></span><button class="btn ghost small" data-act="enter" data-v="cert">📋 결과</button><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
-<div class="mcards">${MISSIONS.map((m, i) => { const ok = unlocked(i), d = m.done(); return `<section class="panel mcard${ok ? '' : ' lock'}"><span class="n">${d ? '<span class="st-done">✔ 완료</span>' : failed(m.v) ? '<span class="st-retry">🔁 70%를 넘지 못했어요 · 다시 도전</span>' : ok ? '도전 가능' : '🔒 앞 임무를 먼저 마쳐요'}</span><h3>${m.t}</h3><p class="muted">${m.d}</p><div class="row"><button class="btn${d ? ' ghost' : ''} small" data-act="enter" data-v="${m.v}"${ok ? '' : ' disabled'}>${d ? '다시 보기' : failed(m.v) ? '다시 도전' : '시작'}</button></div></section>`; }).join('')}</div>
-${(() => { const ok = MISSIONS[3].done(), g = state.game; return `<section class="panel mcard${ok ? '' : ' lock'}" style="margin-top:14px"><span class="n">${ok ? (g.plays ? `🏆 내 최고 ${g.best}점 · ${g.plays}번 도전` : '도전 가능') : '🔒 임무 4를 마치면 열려요'}</span><h3>🎮 마지막 도전 · 지구 컬링</h3><p class="muted">지구를 튕겨서 목표 별자리에 맞는 달에 멈추게 해요! ① 태양 길 → ② 한밤중 별자리 → ③ 내 생일 별자리. 할 때마다 목표가 바뀌고, 게임 점수는 임무 성적과 따로 기록돼요.</p><div class="row"><button class="btn small" data-act="enter" data-v="game"${ok ? '' : ' disabled'}>${g.plays ? '다시 도전' : '시작'}</button></div></section>`; })()}
+${tester() ? '<div class="done" style="margin:0 0 14px"><b>🧪 선생님 시험 모드 (학번 00000) · 모든 임무와 게임이 열려 있어요.</b><span class="muted">시트 보내기 시험은 📋 결과에서</span></div>' : ''}<div class="mcards">${MISSIONS.map((m, i) => { const ok = unlocked(i), d = m.done(); return `<section class="panel mcard${ok ? '' : ' lock'}"><span class="n">${d ? '<span class="st-done">✔ 완료</span>' : failed(m.v) ? '<span class="st-retry">🔁 70%를 넘지 못했어요 · 다시 도전</span>' : ok ? '도전 가능' : '🔒 앞 임무를 먼저 마쳐요'}</span><h3>${m.t}</h3><p class="muted">${m.d}</p><div class="row"><button class="btn${d ? ' ghost' : ''} small" data-act="enter" data-v="${m.v}"${ok ? '' : ' disabled'}>${d ? '다시 보기' : failed(m.v) ? '다시 도전' : '시작'}</button></div></section>`; }).join('')}</div>
+${(() => { const ok = gameOpen(), g = state.game; return `<section class="panel mcard${ok ? '' : ' lock'}" style="margin-top:14px"><span class="n">${ok ? (g.plays ? `🏆 내 최고 ${g.best}점 · ${g.plays}번 도전` : '도전 가능') : '🔒 임무 4를 마치면 열려요'}</span><h3>🎮 마지막 도전 · 지구 컬링</h3><p class="muted">지구를 튕겨서 목표 별자리에 맞는 달에 멈추게 해요! ① 태양 길 → ② 한밤중 별자리 → ③ 내 생일 별자리. 할 때마다 목표가 바뀌고, 게임 점수는 임무 성적과 따로 기록돼요.</p><div class="row"><button class="btn small" data-act="enter" data-v="game"${ok ? '' : ' disabled'}>${g.plays ? '다시 도전' : '시작'}</button></div></section>`; })()}
 ${MISSIONS.every(m => m.done()) ? '<div class="done"><b>🎉 모든 임무를 마쳤어요!</b><button class="btn small" data-act="enter" data-v="game">🎮 마지막 도전 게임 →</button><button class="btn ghost small" data-act="enter" data-v="cert">결과 보기</button></div>' : ''}`;
 }
 function missionPage(i, title, side, ctrlOpts) {
@@ -1026,7 +1029,7 @@ function scoreRows() {
   return MISSIONS.map(({ v, t }, i) => {
     const [a, n] = SCORE[v](), tr = state[v].tries || 0;
     return [t, MISSIONS[i].done() ? `완료 · 한 번에 맞힘 ${a}/${n}${detail[v]}${tr ? ` · 재도전 ${tr}번` : ''}` : failed(v) ? `재도전 필요 (${a}/${n})` : '진행 중'];
-  }).concat([['🎮 지구 컬링 게임 (따로 기록)', state.game.plays ? `최고 ${state.game.best}점 · 도전 ${state.game.plays}번${state.game.rate != null ? ` · 최고 성공률 ${state.game.rate}%` : ''}` : MISSIONS[3].done() ? '아직 안 함' : '임무 4를 마치면 열려요']]);
+  }).concat([['🎮 지구 컬링 게임 (따로 기록)', state.game.plays ? `최고 ${state.game.best}점 · 도전 ${state.game.plays}번${state.game.rate != null ? ` · 최고 성공률 ${state.game.rate}%` : ''}` : gameOpen() ? '아직 안 함' : '임무 4를 마치면 열려요']]);
 }
 function viewCert() {
   return `<div class="top"><button class="btn ghost small" data-act="enter" data-v="map">← 임무 목록</button><span class="title" style="font-size:26px">📋 탐사 결과</span></div>
@@ -1375,7 +1378,7 @@ function enter(v) {
   if (['map', 'm1', 'm2', 'm3', 'm4', 'game', 'cert'].includes(v) && !state.num) v = 'intro';
   const i = MISSIONS.findIndex(m => m.v === v);
   if (i > 0 && !unlocked(i)) v = 'map';
-  if (v === 'game' && !MISSIONS[3].done()) v = 'map';
+  if (v === 'game' && !gameOpen()) v = 'map';
   gStop(); if (v === 'game') gNew();
   state.view = v; ui.fb = {}; ui.submitMsg = ''; Object.assign(Stage.S, { simple: false, frame: 'star', fb: 0 });
   if (CHECK[v]) CHECK[v].forEach(([k]) => { delete Stage.watch[k]; });
@@ -1487,7 +1490,7 @@ async function startMission(btn) {
   }
   state.num = num; state.name = name;
   // 선생님 시험용: 학번 00000으로 들어오면 바로 결과(보내기) 화면으로
-  if (num === '00000') { enter('cert'); ui.submitMsg = '🧪 선생님 시험 모드예요. 보내기를 눌러 구글 시트에 줄이 생기는지 확인하세요.'; render(); return; }
+  // 선생님 시험용: 학번 00000이면 모든 임무·게임이 열린 임무 목록으로 (시트 보내기 시험은 📋 결과에서)
   enter('map');
 }
 

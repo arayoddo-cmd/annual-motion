@@ -110,6 +110,12 @@ button.blank:not(.show){color:#ffcf5aa8;letter-spacing:.12em}
 .concept.big .note{font-size:clamp(18px,1.6vw,24px)}
 .concept.big .blank{min-width:1.6em;padding:0 .3em}
 .concept.big ol{font-size:clamp(28px,3vw,46px);padding-left:1.6em}
+.wsp{display:inline-block;background:#3dff8f;color:#03230f;font-weight:900;border-radius:999px;padding:4px 16px;font-size:clamp(17px,1.5vw,22px);box-shadow:0 0 16px #3dff8f88;white-space:nowrap;margin:0 8px}
+.wsp.none{background:#c4b0ff;color:#1a0b45;box-shadow:0 0 16px #c4b0ff88}
+.concept.big .wsp{font-size:clamp(24px,2.3vw,34px);padding:6px 22px}
+.concept .ex{color:#c4b0ff}
+.concept .wsk{color:#fff}
+.concept.big .leg{font-size:clamp(20px,1.8vw,28px)}
 .ask{background:#1c2a5c;border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:15px}
 .ask b{color:var(--accent)}
 
@@ -749,17 +755,21 @@ const Stage = (() => {
 })();
 
 /* ───────── 수업 모드 ───────── */
+/* 학습지에 없는 내용(수업 PPT·교과서에서 더한 것)은 X()로 감싸 보라색으로 보여요. pg = 학습지 쪽 안내 */
+const X = s => '<span class="ex">' + s + '</span>';
+const wsp = T => T.pg ? `<span class="wsp">📒 학습지 ${T.pg}</span>` : '<span class="wsp none">📒 학습지에 없는 더 알아보기</span>';
+const WSLEG = '<p class="note leg">빈칸을 누르면 하나씩 답이 보여요. · <b class="wsk">흰 글씨</b> = 학습지 내용 · <span class="ex">보라 글씨</span> = 학습지에 없는 더 알아보기</p>';
 const TABS = [
-  { name: '① 지구의 공전', title: '🌍 지구의 공전과 태양의 연주 운동', setup: { view: 'orbit', cam: 'oblique', t: 2.5, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false },
-    lines: ['지구가 [태양]을 중심으로 [1년]에 한 바퀴씩 도는 운동', '공전 방향: [서] → [동] (북극 위에서 보면 [시계 반대] 방향, 자전 방향과 같아요)', '공전 속도: 하루에 약 [1]° (360° ÷ 365일)', '[태양의 연주 운동]: 지구의 공전 때문에 태양이 별자리 사이를 [서] → [동]으로 이동하여 [1년] 후 처음 위치로 돌아오는 것처럼 보이는 운동', '지구가 1 → 2 → 3으로 공전하면, 천구에서 태양은 1′ → 2′ → 3′으로 보여요.', '태양이 실제로 움직이는 것이 아니라 [지구]가 공전해서 생기는 [겉보기] 운동이에요.'],
+  { name: '① 지구의 공전', title: '🌍 지구의 공전과 태양의 연주 운동', pg: '10쪽 1·2 공전과 태양의 연주 운동', setup: { view: 'orbit', cam: 'oblique', t: 2.5, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false },
+    lines: ['지구가 [태양]을 중심으로 [1년]에 한 바퀴씩 서쪽에서 동쪽으로 도는 운동', '공전 방향: [서] → [동] ' + X('(북극 위에서 보면 [시계 반대] 방향, 자전 방향과 같아요)'), '공전 속도: 하루에 약 [1]°씩 이동 ' + X('(360° ÷ 365일)'), '지구 공전으로 나타나는 현상: 태양의 연주 운동, 계절별 별자리 변화', '태양의 연주 운동: 지구의 공전으로 1년 동안 나타나는 태양의 [겉보기] 운동 → 태양이 별자리를 배경으로 [서] → [동]으로 이동하여 [1년] 후 처음 위치로 되돌아오는 것처럼 보여요.', '연주 운동 방향: 서 → 동 (지구의 공전 방향과 [같음]) · 속도: 하루에 약 1° (지구의 공전 속도와 [같음])', X('지구가 1 → 2 → 3으로 공전하면, 천구에서 태양은 1′ → 2′ → 3′으로 보여요.'), X('태양이 실제로 움직이는 것이 아니라 [지구]가 공전해서 생기는 운동이에요.')],
     ask: '<b>따라가 봐요</b> +1달을 한 번씩 누르며 지구(1, 2, 3…)가 움직일 때, 별자리 띠에서 태양(1′, 2′, 3′…)이 어느 쪽으로 옮겨 가는지 손가락으로 따라가 보세요.' },
-  { name: '② 태양과 별자리의 위치 변화', title: '🌇 해가 진 직후 서쪽 하늘 (15일 간격)', setup: { view: 'west', wmode: 'single', d: 1 },
-    lines: ['태양을 기준으로 별자리는 [동] → [서]로 이동해요. (별의 연주 운동)', '별자리를 기준으로 태양은 [서] → [동]으로 이동해요. (태양의 연주 운동)', '하루에 약 [1]°씩 이동해서 [1년] 후 처음 위치로 돌아와요.', '실제로 움직인 것은 [지구]예요. 연주 운동은 [겉보기] 운동이에요.', '<b>왜 방향이 반대일까?</b> 같은 움직임을 [기준]만 바꿔 본 것이에요. 태양이 별자리 사이를 서 → 동으로 옮겨 가면, 태양을 기준으로 볼 때는 별자리가 [동] → [서]로 밀려나는 것처럼 보여요.'],
+  { name: '② 태양과 별자리의 위치 변화', title: '🌇 해가 진 직후 서쪽 하늘 (15일 간격)', pg: '10쪽 탐구 (15일 간격 서쪽 하늘)', setup: { view: 'west', wmode: 'single', d: 1 },
+    lines: ['태양을 기준으로 별자리는 [동] → [서]로 이동해요. (별의 연주 운동)', '별자리를 기준으로 태양은 [서] → [동]으로 이동해요. (태양의 연주 운동)', '하루에 약 [1]°씩 이동해서 [1년] 후 처음 위치로 돌아와요.', '실제로 움직인 것은 [지구]예요. 연주 운동은 [겉보기] 운동이에요.', X('<b>왜 방향이 반대일까?</b> 같은 움직임을 [기준]만 바꿔 본 것이에요. 태양이 별자리 사이를 서 → 동으로 옮겨 가면, 태양을 기준으로 볼 때는 별자리가 [동] → [서]로 밀려나는 것처럼 보여요.')],
     ask: '<b>먼저 예측!</b> 8월 1일 해가 진 직후 사자자리가 보였어요. 8월 31일 같은 시각에는 어디에 있을까요?<br><b>기차 비유</b> 기차가 앞으로 가면(태양: 서 → 동) 기차 안에서 본 바깥 나무는 뒤로 가는 것처럼 보이죠(별자리: 동 → 서)? 무엇을 기준으로 보느냐에 따라 방향이 반대가 돼요.<br><b>모형으로 확인</b> 탭 ①에서 🔄 태양 기준을 누르면 지구 → 태양 방향이 고정되고, 별자리가 동 → 서로 옮겨 가는 것을 볼 수 있어요.' },
-  { name: '③ 황도와 계절별 별자리', title: '♈ 황도 12궁과 계절별 별자리', setup: { view: 'orbit', cam: 'oblique', sunLine: true, nightLine: true, trail: true, hudAns: true },
-    lines: ['[황도]: 태양이 연주 운동하면서 별자리 사이를 지나가는 길', '[황도 12궁]: 황도에 있는 12개의 별자리', '태양 쪽 별자리는 [낮]에 떠 있어서 보이지 않아요.', '태양 [반대쪽] 별자리가 한밤중에 남쪽 하늘에서 보여요. ([6]개월 차이)', '띠에 적힌 "3월"은 [3월]에 태양이 그 별자리(물병자리) 쪽에 있다는 뜻이에요. 그래서 3월 밤에는 물병자리가 [보이지 않아요].', '3월 한밤중에는 6개월 뒤 "[9월]" 별자리인 [사자자리]가 남쪽 하늘에 보여요.', '<b>지구 위치로 몇 월인지 찾기</b>: 지구에서 [태양] 쪽으로 선을 이어 닿는 별자리의 달이 그때예요. 태양 [반대]쪽으로 이어 닿는 별자리는 그때 한밤중에 보여요.','3월 물병 → [사자] · 6월 황소 → [전갈] · 9월 사자 → [물병] · 12월 전갈 → [황소]'],
+  { name: '③ 황도와 계절별 별자리', title: '♈ 황도 12궁과 계절별 별자리', pg: '11쪽 3 계절별 별자리 변화 + 탐구', setup: { view: 'orbit', cam: 'oblique', sunLine: true, nightLine: true, trail: true, hudAns: true },
+    lines: ['지구가 태양을 중심으로 [공전]하여 태양이 보이는 위치가 달라지므로, 한밤중 남쪽 하늘에서 볼 수 있는 별자리는 [계절]에 따라 달라져요.', '[황도]: 태양이 연주 운동하면서 별자리 사이를 지나가는 길', '[황도 12궁]: 황도에 있는 12개의 별자리', '태양 쪽 별자리는 ' + X('[낮]에 떠 있어서 ') + '보이지 않아요.', '태양 [반대쪽] 별자리가 한밤중에 남쪽 하늘에서 보여요. ([6]개월 차이)', '태양은 황도 12궁에 표시된 달에 해당하는 별자리를 지나요. ' + X('띠에 적힌 "3월"은 [3월]에 태양이 그 별자리(물병자리) 쪽에 있다는 뜻이에요. 그래서 3월 밤에는 물병자리가 [보이지 않아요].'), X('3월 한밤중에는 6개월 뒤 "[9월]" 별자리인 [사자자리]가 남쪽 하늘에 보여요.'), X('<b>지구 위치로 몇 월인지 찾기</b>: 지구에서 [태양] 쪽으로 선을 이어 닿는 별자리의 달이 그때예요. 태양 [반대]쪽으로 이어 닿는 별자리는 그때 한밤중에 보여요.'), '<b>탐구</b> 전등 = [태양], 관찰자 = [지구] · 태양 쪽 → 한밤중 남쪽 하늘: 9월 사자 → [물병] · 10월 처녀 → [물고기] · 1월 궁수 → [쌍둥이] · 6월 황소 → [전갈]'],
     ask: '<b>생각해요</b> 내 생일 달에 태양이 지나는 별자리를 생일 밤에 볼 수 있을까요?<br><b>참고</b> 흔히 말하는 점성술 별자리(예: 4월 하순 = 황소자리)는 약 2000년 전에 정한 날짜라서, 지금 실제 하늘과 별자리 하나 정도 차이가 나요. (지구 자전축 방향이 아주 천천히 바뀌기 때문) 우리는 <b>지금 실제로 태양이 지나는 별자리</b>(교과서 그림)를 기준으로 해요.' },
-  { name: '④ 일주 운동 vs 연주 운동', title: '⚖️ 일주 운동과 연주 운동 비교', setup: { view: 'south', smode: 'day', playing: true },
+  { name: '④ 일주 운동 vs 연주 운동', title: '⚖️ 일주 운동과 연주 운동 비교', pg: '12쪽 형성평가 2 (8·10쪽 복습)', setup: { view: 'south', smode: 'day', playing: true },
     lines: ['별의 일주 운동: [동] → [서], 1시간에 [15]°, 원인은 지구의 [자전]', '별의 연주 운동: [동] → [서], 하루에 약 [1]°, 원인은 지구의 [공전]', '태양의 연주 운동: [서] → [동], 하루에 약 [1]°, 원인은 지구의 [공전]', '별의 연주 운동과 태양의 연주 운동은 같은 현상을 기준만 바꿔 본 것이라 방향이 [반대]예요.'],
     ask: '<b>비교해요</b> 남쪽 하늘의 오리온자리를 ⏱ 같은 날 1시간 간격으로 볼 때와 📅 15일 간격으로 같은 시각(밤 9시)에 볼 때를 번갈아 재생해 보세요. 방향은 같고, 15°를 움직이는 데 걸리는 시간이 1시간 vs 15일이에요.<br><b>그리고</b> ☀ 태양의 연주 운동을 재생해 보세요. 별자리를 기준으로 태양은 반대로 서 → 동(오른쪽 → 왼쪽)으로 옮겨 가요.' }
 ];
@@ -980,11 +990,11 @@ ${CONFIG.SUBMIT_URL ? '<div style="text-align:right"><button class="btn ghost sm
 }
 function viewClass() {
   const T = TABS[ui.tab];
-  return `<div class="top"><span class="title" style="font-size:26px">👩‍🏫 수업 모드</span><div class="tabs">${TABS.map((t, i) => `<button class="tab${on(i === ui.tab)}" data-act="tab" data-i="${i}">${t.name}</button>`).join('')}</div><span class="grow"></span><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
+  return `<div class="top"><span class="title" style="font-size:26px">👩‍🏫 수업 모드</span><div class="tabs">${TABS.map((t, i) => `<button class="tab${on(i === ui.tab)}" data-act="tab" data-i="${i}">${t.name}</button>`).join('')}</div>${wsp(T)}<span class="grow"></span><button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>
 <div class="cl-stage"><div class="stage-slot"></div><div class="cl-side">${ctrls()}</div></div>
-<section class="panel concept big"><div class="row"><h3 style="flex:1">${T.title}</h3><button class="btn ghost small" data-act="revall">${T.lines.every((l, i) => fill(l, ui.tab + '-' + i).indexOf('blank"') < 0) ? '빈칸 가리기' : '빈칸 모두 보기'}</button></div>
+<section class="panel concept big"><div class="row"><h3 style="flex:1">${T.title}</h3>${wsp(T)}<button class="btn ghost small" data-act="revall">${T.lines.every((l, i) => fill(l, ui.tab + '-' + i).indexOf('blank"') < 0) ? '빈칸 가리기' : '빈칸 모두 보기'}</button></div>
 <ol>${T.lines.map((l, i) => `<li>${fill(l, ui.tab + '-' + i)}</li>`).join('')}</ol>
-<div class="ask">💬 ${T.ask}</div><p class="note">빈칸을 누르면 하나씩 답이 보여요. (학습지 10~12쪽)</p></section>`;
+<div class="ask">💬 ${T.ask}</div>${WSLEG}</section>`;
 }
 function viewMap() {
   const n = MISSIONS.filter(m => m.done()).length;

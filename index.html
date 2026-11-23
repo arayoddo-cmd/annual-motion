@@ -290,7 +290,7 @@ const GREENLAND = [[-73,78],[-60,82],[-40,83.5],[-22,82],[-18,78],[-22,72],[-24,
    t: 1월 1일부터 지난 달 수 (t=2.5 → 3월 16일). 태양의 겉보기 위치는 띠에서 t×30°에 있어요. */
 const Stage = (() => {
   const S = { view: 'orbit', cam: 'oblique', t: 2.5, t0: 2.5, playing: false, speed: 1, goal: null, rate: 2,
-    sunLine: true, nightLine: true, trail: false, marks: false, simple: false, frame: 'star', fb: 0, ft0: 0, fh: 0, hudAns: true, wmode: 'single', d: 1, ov: 1, ovRun: false, smode: 'day', s: 0 };
+    sunLine: true, nightLine: true, trail: false, marks: false, simple: false, frame: 'star', fb: 0, ft0: 0, fh: 0, hudAns: true, hideSky: false, skyOn: false, wmode: 'single', d: 1, ov: 1, ovRun: false, smode: 'day', s: 0 };
   const SPEEDS = [0.25, 0.7, 2]; // 1초에 흐르는 달 수
   const watch = {}, hooks = { watch: null, change: null };
   const el = document.createElement('div'); el.className = 'stage';
@@ -505,9 +505,11 @@ const Stage = (() => {
       tag(ZOD[i], P(ring(RB, c, -HB / 2 - 0.7)), { size: fs, bg: isNight ? '#ffe28a' : 'rgba(8,14,40,.7)', fg: isNight ? '#2a1c00' : '#dfe8ff', alpha });
     });
     const sunF = S.frame === 'sun' || S.fb > 0, rot = rotDeg();
+    // 수업 탭 ①: 처음에는 지구 위치만 보여 주고, '천구 위치 보기'를 누르면 천구(별자리 띠)의 태양 위치 1′, 2′, 3′ …과 선이 나타나요
+    const skyHid = S.hideSky && !S.skyOn && !sunF;
     if (sunF) drawStarFrame(rot);
     // 태양의 겉보기 위치와 자취 (서→동)
-    if (S.trail && !sunF && S.t > S.t0 + 0.01) {
+    if (S.trail && !sunF && !skyHid && S.t > S.t0 + 0.01) {
       const span = Math.min(12, S.t - S.t0), n = Math.max(2, Math.ceil(span * 12));
       ctx.strokeStyle = 'rgba(255,170,60,.9)'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); let pen = false;
       for (let i = 0; i <= n; i++) { const q = P(ring(RB - 0.1, (S.t - span + span * i / n) * 30, 0)); if (!q) { pen = false; continue; } if (pen) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); pen = true; }
@@ -520,20 +522,20 @@ const Stage = (() => {
       for (let k = 0; k <= n; k++) {
         const tk = S.t0 + k, qe = P(ring(RO, tk * 30 + 180)), qb = P(ring(RB - 0.1, tk * 30, 0));
         if (!qe || !qb) continue;
-        ctx.strokeStyle = 'rgba(255,140,190,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(qe[0], qe[1]); ctx.lineTo(qb[0], qb[1]); ctx.stroke();
+        if (!skyHid) { ctx.strokeStyle = 'rgba(255,140,190,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(qe[0], qe[1]); ctx.lineTo(qb[0], qb[1]); ctx.stroke(); }
         ctx.fillStyle = '#7ce0a0'; ctx.beginPath(); ctx.arc(qe[0], qe[1], 7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(qb[0], qb[1], 9, 0, Math.PI * 2); ctx.fill();
         tag(`${k + 1}`, qe, { dy: 20, size: 17, bg: '#7ce0a0', fg: '#06200f' });
-        tag(`${k + 1}′`, qb, { dy: -24, size: 18, bg: '#ffd34d', fg: '#2a1c00' });
+        if (!skyHid) { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(qb[0], qb[1], 9, 0, Math.PI * 2); ctx.fill(); tag(`${k + 1}′`, qb, { dy: -24, size: 18, bg: '#ffd34d', fg: '#2a1c00' }); }
       }
-      if (n >= 1) {
+      if (skyHid) tag(n >= 1 ? '지구 1 → 2 → 3 …일 때 태양은 천구(별자리 띠)의 어디에 보일까요? 예상한 뒤 ☀ 천구 위치 보기를 눌러요' : '+1달을 눌러 지구를 옮겨 보세요. 지구 위치(1, 2, 3…)가 표시돼요', [W / 2, H - 26], { size: 15, bg: 'rgba(8,14,40,.85)', fg: '#ffd9a8' });
+      else if (n >= 1) {
         tag('서', P(ring(RB, S.t0 * 30 - 12, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
         tag('동', P(ring(RB, S.t * 30 + 12, 0)), { size: 20, bg: '#ffcfb0', fg: '#3a1a00' });
         tag('지구가 1 → 2 → 3 … 공전하면 태양은 1′ → 2′ → 3′ … 서 → 동으로 이동해 보여요', [W / 2, H - 26], { size: 16, bg: '#ff9a3d', fg: '#2a1000' });
       } else tag('+1달을 눌러 지구를 옮겨 보세요. 지구 위치(1, 2, 3…)와 그때 태양이 보이는 천구 위치(1′, 2′, 3′…)가 표시돼요', [W / 2, H - 26], { size: 15 });
     }
     const qSunApp = P(ring(RB - 0.1, a, 0));
-    if (S.sunLine) {
+    if (S.sunLine && !skyHid) {
       dashLine(qE, qSunApp, 'rgba(255,170,60,.95)', 2.5);
       if (qSunApp) {
         const gr = ctx.createRadialGradient(qSunApp[0], qSunApp[1], 0, qSunApp[0], qSunApp[1], 16);
@@ -777,7 +779,7 @@ const X = s => '<span class="ex">' + s + '</span>';
 const wsp = T => T.pg ? `<span class="wsp">📒 학습지 ${T.pg}</span>` : '<span class="wsp none">📒 학습지에 없는 더 알아보기</span>';
 const WSLEG = '<p class="note leg">빈칸을 누르면 하나씩 답이 보여요. · <b class="wsk">흰 글씨</b> = 학습지 내용 · <span class="ex">보라 글씨</span> = 학습지에 없는 더 알아보기</p>';
 const TABS = [
-  { name: '① 지구의 공전', title: '🌍 지구의 공전과 태양의 연주 운동', pg: '10쪽 1·2 공전과 태양의 연주 운동', setup: { view: 'orbit', cam: 'oblique', t: 2.5, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false },
+  { name: '① 지구의 공전', title: '🌍 지구의 공전과 태양의 연주 운동', pg: '10쪽 1·2 공전과 태양의 연주 운동', setup: { view: 'orbit', cam: 'oblique', t: 2.5, sunLine: true, nightLine: false, trail: true, marks: true, simple: true, hudAns: false, hideSky: true },
     lines: ['지구의 공전: 지구가 [태양]을 중심으로 [1년]에 한 바퀴씩 서쪽에서 동쪽으로 도는 운동', '지구의 공전 방향: [서] → [동] ' + X('(북극 위에서 보면 시계 반대 방향, 자전 방향과 같아요)'), '지구의 공전 속도: 하루에 약 [1]°씩 이동 ' + X('(360° ÷ 365일)'), '지구 공전으로 나타나는 현상: 태양의 연주 운동, 계절별 별자리 변화', '태양의 연주 운동: 지구의 공전으로 1년 동안 나타나는 태양의 [겉보기] 운동<br>→ 태양이 별자리를 배경으로 서쪽에서 동쪽으로 이동하여 1년 후 처음 위치로 되돌아오는 것처럼 보인다.', '태양의 연주 운동 방향: [서] → [동] (지구의 공전 방향과 같음)', '태양의 연주 운동 속도: 하루에 약 [1]°씩 이동 (지구의 공전 속도와 같음)', X('지구가 1 → 2 → 3으로 공전하면, 천구에서 태양은 1′ → 2′ → 3′으로 보여요. 태양이 실제로 움직이는 것이 아니라 지구가 공전해서 생기는 운동이에요.')],
     ask: '<b>따라가 봐요</b> +1달을 한 번씩 누르며 지구(1, 2, 3…)가 움직일 때, 별자리 띠에서 태양(1′, 2′, 3′…)이 어느 쪽으로 옮겨 가는지 손가락으로 따라가 보세요.' },
   { name: '② 태양과 별자리의 위치 변화', title: '🌇 해가 진 직후 서쪽 하늘 (15일 간격)', pg: '10쪽 탐구 (15일 간격 서쪽 하늘)', setup: { view: 'west', wmode: 'single', d: 1 },
@@ -947,6 +949,7 @@ ${S.wmode === 'single' ? `<div class="ctrl"><button class="chip big${S.playing ?
   let h = `<div class="ctrl"><button class="chip big${S.playing ? '' : ' play'}" data-act="play">${S.playing ? '⏸ 멈춤' : '▶ 재생'}</button>
 <button class="chip" data-act="step" data-v="0.5">+15일</button><button class="chip" data-act="step" data-v="1">+1달</button><button class="chip" data-act="restart">↺ 처음부터</button>
 ${grp('빠르기', 'spd', [[0, '느리게'], [1, '보통'], [2, '빠르게']], v => S.speed === v)}${grp('보는 곳', 'cam', [['oblique', '🔭 비스듬히'], ['top', '⬇️ 위에서']], v => S.cam === v)}</div>`;
+  if (S.hideSky && state.view === 'class') h += `<div class="ctrl"><button class="chip big${S.skyOn ? '' : ' play'}" data-act="skyon">${S.skyOn ? '🙈 천구 위치 숨기기' : '☀ 천구 위치 보기 (1′, 2′, 3′ …)'}</button></div>`;
   if (S.simple && state.view === 'class') h += `<div class="ctrl">${grp('기준', 'frame', [['star', '⭐ 별자리 기준 (태양의 연주 운동)'], ['sun', '🔄 태양 기준 (별의 연주 운동)']], v => S.frame === v)}</div>`;
   if (o.months !== false) h +=`<div class="ctrl">${grp('달', 'month', Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}월`]), v => Math.floor(S.t) % 12 + 1 === v, 'months')}</div>`;
   if (o.tog !== false) h += `<div class="ctrl">${grp('보기', 'tog', [['sunLine', '☀ 태양 쪽 선'], ['nightLine', '🌙 한밤중 선'], ['trail', '✨ 태양의 겉보기 자취']], k => S[k])}</div>`;
@@ -1462,7 +1465,7 @@ function render() {
   BGM.mode(state.view === 'game' ? 'game' : null);
 }
 function tabSetup() {
-  Stage.set(Object.assign({ playing: false, t: 2.5, speed: 1, marks: false, simple: false, frame: 'star', fb: 0 }, TABS[ui.tab].setup));
+  Stage.set(Object.assign({ playing: false, t: 2.5, speed: 1, marks: false, simple: false, frame: 'star', fb: 0, hideSky: false, skyOn: false }, TABS[ui.tab].setup));
   Stage.preset();
 }
 function m3Setup() {
@@ -1475,7 +1478,7 @@ function enter(v) {
   if (i > 0 && !unlocked(i)) v = 'map';
   if (v === 'game' && !gameOpen()) v = 'map';
   gStop(); if (v === 'game') { gNew(); loadRank(); }
-  state.view = v; ui.fb = {}; ui.submitMsg = ''; Object.assign(Stage.S, { simple: false, frame: 'star', fb: 0 });
+  state.view = v; ui.fb = {}; ui.submitMsg = ''; Object.assign(Stage.S, { simple: false, frame: 'star', fb: 0, hideSky: false, skyOn: false });
   if (CHECK[v]) CHECK[v].forEach(([k]) => { delete Stage.watch[k]; });
   if (v === 'intro') { Stage.set({ view: 'orbit', cam: 'oblique', playing: true, speed: 1, sunLine: true, nightLine: true, trail: false, marks: false, hudAns: true }); Stage.preset(); }
   if (v === 'class') tabSetup();
@@ -1509,6 +1512,7 @@ app.addEventListener('click', async e => {
   else if (a === 'cam') { Stage.set({ cam: v }); render(); }
   else if (a === 'frame') { Stage.set({ frame: v, playing: false, goal: null }); render(); }
   else if (a === 'month') { Stage.set({ t: +v - 1 + 0.5, playing: false }); render(); }
+  else if (a === 'skyon') { Stage.set({ skyOn: !S.skyOn }); render(); }
   else if (a === 'tog') { Stage.set({ [v]: !S[v] }); if (v === 'trail') Stage.trailReset(); render(); }
   else if (a === 'wmode') {
     Stage.set({ wmode: v, playing: false });

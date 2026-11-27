@@ -1164,7 +1164,7 @@ ${CONFIG.SUBMIT_URL ? `<p class="muted">진행 상황은 임무를 풀 때마다
 /* ───────── 교사 화면 (교사 코드는 Apps Script에서만 확인) ───────── */
 function viewTeacher() {
   const T = ui.teacher || (ui.teacher = { data: null, code: '', msg: '', cls: '' });
-  const head = `<div class="top"><span class="title" style="font-size:24px">👩‍🏫 교사 화면 · 연주운동</span><span class="grow"></span>${T.data ? '<button class="btn ghost small" data-act="tload">🔄 새로고침</button>' : ''}<button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>`;
+  const head = `<div class="top"><span class="title" style="font-size:24px">👩‍🏫 교사 화면 · 연주운동</span><span class="grow"></span>${T.data ? `<button class="btn ghost small" data-act="tload">🔄 새로고침</button><button class="btn small${T.auto ? '' : ' ghost'}" data-act="tauto">${T.auto ? '⏱ 자동 새로고침 켜짐 (30초마다)' : '⏱ 30초마다 자동 새로고침'}</button>` : ''}<button class="btn ghost small" data-act="enter" data-v="intro">← 처음 화면</button></div>`;
   if (!T.data) return head + `<section class="panel" style="max-width:440px"><h3>교사 코드 입력</h3>
 <div class="row"><input id="tcode" type="password" maxlength="30" placeholder="교사 코드" autocomplete="off" style="flex:1;min-width:160px"><button class="btn" data-act="tload">결과 보기</button></div>
 ${T.msg ? `<p class="fb ${T.msg.startsWith('불러') ? '' : 'bad'}">${T.msg}</p>` : ''}</section>`;
@@ -1183,11 +1183,11 @@ ${T.msg ? `<p class="fb ${T.msg.startsWith('불러') ? '' : 'bad'}">${T.msg}</p>
 ${list.length ? list.map(r => `<tr>${order.map(i => `<td>${i === iTime ? `<small>${esc(r[i])}</small>` : cell(r[i])}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${order.length}" class="muted" style="text-align:center">아직 참여한 학생이 없어요.</td></tr>`}
 </tbody></table></div><p class="note">"한 번에"는 처음 고른 답이 정답이었던 문제 수예요. 학번 앞 3자리로 반을 나눠요. (예: 10312 → 1학년 3반)</p></section>${gameBox(T, (r, i) => { const n = String(r[i] || ''); return n.length > 2 ? n.slice(0, -2) : ''; }, clsName)}`;
 }
-async function teacherLoad() {
+async function teacherLoad(silent) {
   const T = ui.teacher, inp = document.getElementById('tcode');
   if (inp) T.code = inp.value.trim();
   if (!T.code) { T.msg = '교사 코드를 입력해 주세요.'; render(); return; }
-  T.msg = '불러오는 중…'; render();
+  if (!silent) { T.msg = '불러오는 중…'; render(); }
   try {
     if (!(await hello())) { T.msg = 'Apps Script가 아직 예전 버전이에요. 일주운동 폴더의 apps-script.gs로 바꾸고 새 버전으로 배포해 주세요.'; render(); return; }
     const out = await post({ lesson: CONFIG.LESSON, action: 'list', teacher: T.code });
@@ -1205,7 +1205,7 @@ async function teacherLoad() {
    주문 카드(☀ 태양이 ○○자리를 지날 때 / 🌙 한밤중 남쪽 하늘에 ○○자리가 보일 때)에 맞는 달에 '배달!'을 눌러요.
    그 달 한가운데에 가까우면 PERFECT, 그 달 안이면 GOOD. 연속 성공은 콤보(3연속 ×2, 6연속 ×3), 🎂 생일 주문은 황금 주문(500점).
    주문마다 한 번만 배달할 수 있고, 지구가 그 달을 지나치면 실패예요.
-   1단계 선이 보여요 → 2단계 선이 숨어요(배달하면 번쩍) → 3단계 주문 2개가 동시에 → (선택) 무한 배달(목숨 3개, 점점 빨라져요, 총점에는 안 들어가요).
+   1단계 선이 보여요 → 2단계 선이 숨어요(배달하면 번쩍) → 3단계 주문 2개가 동시에 → (선택) 무한 배달(목숨 3개, 점점 빨라져요, 최고 점수는 총점에 더해요).
    점수는 '연주운동 게임 현황' 탭에 따로 기록해요. */
 const mm = m => ((m - 1) % 12 + 12) % 12 + 1;               // 1~12월로 맞춰요
 // 지구 각도 th는 figPos 그림과 같은 배치예요 (1월 1일 = 180°, 시계 반대 방향으로 커져요)
@@ -1218,15 +1218,15 @@ const DL = [
   { t: '1단계 · 연습 배달', d: '태양 쪽 선(노랑)과 한밤중 선(파랑)이 보여요. 주문에 맞는 선이 목표 별자리에 닿을 때 배달! 90초 동안 8번 이상 성공하면 다음 단계가 열려요.', yr: 8, time: 90, goal: 8, pt: [150, 100], lines: true, n: 1 },
   { t: '2단계 · 깜깜 배달', d: '이제 선이 숨어요! 지구 자리만 보고 판단해요. 한밤중에는 태양 반대쪽을 봐요. 90초 동안 7번 이상 성공하면 다음 단계가 열려요.', yr: 8, time: 90, goal: 7, pt: [200, 130], n: 1 },
   { t: '3단계 · 주문 두 개', d: '☀ 주문과 🌙 주문이 함께 와요. 띠에 ☀·🌙 표시가 붙으니, 지구가 먼저 닿는 주문부터 배달! (누르면 지금 지구에 더 가까운 주문으로 배달해요) 90초 동안 9번 이상 성공하면 깨요.', yr: 9.5, time: 90, goal: 9, pt: [250, 160], n: 2 },
-  { t: '🔥 무한 배달 (선택)', d: '하고 싶은 사람만 하는 보너스예요. 시간 제한 없이 목숨 3개! 실패하면 목숨이 하나 줄고, 5번 성공할 때마다 지구가 빨라져요. 선은 숨어 있어요. 점수는 총점·순위에 들어가지 않고 무한 최고 기록으로만 남아요.', yr: 8, pt: [200, 130], n: 1, endless: true }
+  { t: '🔥 무한 배달 (선택)', d: '하고 싶은 사람만 하는 보너스예요. 시간 제한 없이 목숨 3개! 실패하면 목숨이 하나 줄고, 5번 성공할 때마다 지구가 빨라져요. 선은 숨어 있어요. 무한 배달 최고 점수도 총점에 더해져요.', yr: 8, pt: [200, 130], n: 1, endless: true }
 ];
 const GCOLS = ['최고 점수', '도전 횟수', '마지막 점수', '깬 단계', '최고 성공률', '1단계 최고', '2단계 최고', '3단계 최고', '무한 최고', '배달 수'];
 const gMul = c => c >= 6 ? 3 : c >= 3 ? 2 : 1;
 let G = null, gRaf = 0;
 // 예전(지구 컬링) 기록이 남아 있으면 새 게임 기록으로 바꿔요
 function gData() { const g = state.game; if (!g.sb) Object.assign(g, { sb: [0, 0, 0, 0], best: 0, clear: 0, rate: null }); if (g.hits == null) g.hits = 0; g.best = gSum(g); return g; }
-// 총점 = 1~3단계 최고 점수의 합 (무한 배달은 선택이라 빼요)
-const gSum = g => (g.sb[0] || 0) + (g.sb[1] || 0) + (g.sb[2] || 0);
+// 총점 = 1~3단계 + 무한 배달(선택) 최고 점수의 합
+const gSum = g => g.sb.reduce((a, b) => a + (b || 0), 0);
 function gNew() { G = { phase: 'menu' }; }
 function gStop() { cancelAnimationFrame(gRaf); gRaf = 0; }
 const gLevel = () => { const g = gData(), open = tester() ? 3 : Math.min(g.clear, 3); return Math.min(ui.gLv == null ? Math.min(open, 2) : ui.gLv, open); };
@@ -1372,16 +1372,16 @@ function viewGame() {
 <label for="bday">🎂 내 생일은 몇 월? (생일 주문에 나와요)</label> <select id="bday" class="gsel"><option value="">고르지 않음 (친구 생일로)</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}"${b === i + 1 ? ' selected' : ''}>${i + 1}월</option>`).join('')}</select>
 <p class="muted" style="font-size:14px">※ 점성술 별자리(생일 날짜표)와 다를 수 있어요. 그 날짜표는 약 2000년 전에 정해서, 지금 실제 하늘과 별자리 하나 정도 차이가 나요.</p>
 <div class="row" style="margin-top:8px"><button class="btn" data-act="gstart">🚚 배달 시작!</button></div>
-<p class="note">내 최고 점수 <b>${g.best}점</b> (1~3단계마다 가장 잘한 점수를 더해요: ${[0, 1, 2].map(i => `${i + 1}단계 ${sb[i] || 0}`).join(' + ')})${sb[3] ? ` · 🔥 무한 최고 ${sb[3]}점(총점과 따로)` : ''} · 깬 단계 ${g.clear}/3 · 도전 ${g.plays}번</p>${rankBox()}</section>`;
+<p class="note">내 최고 점수 <b>${g.best}점</b> (단계마다 가장 잘한 점수를 더해요: ${DL.map((L, i) => `${i < 3 ? i + 1 + '단계' : '무한'} ${sb[i] || 0}`).join(' + ')}) · 깬 단계 ${g.clear}/3 · 도전 ${g.plays}번</p>${rankBox()}</section>`;
   }
   const L = DL[G.lv];
   if (G.phase === 'over') {
     const O = G.over, tot = G.hits + G.fails;
     const head = L.endless ? `🔥 무한 배달 끝!` : O.win ? `🎉 ${L.t} 성공!` : '😢 아쉬워요!';
-    const msg = L.endless ? (O.lvUp ? '🎉 무한 배달 내 최고 기록이에요! (총점과 따로 기록돼요)' : `무한 배달 내 최고 기록 ${sb[3]}점 (총점과 따로 기록돼요)`) : O.win ? (G.lv < 2 ? '다음 단계가 열렸어요!' : '🏆 3단계까지 모두 깼어요! 공전 택배 완료! 더 하고 싶은 사람은 🔥 무한 배달(선택)에 도전해 보세요.') : `${G.hits}번 성공. ${L.goal}번 이상 성공하면 다음 단계가 열려요.`;
+    const msg = L.endless ? (O.lvUp ? '🎉 무한 배달 내 최고 기록이에요! 총점에도 더해졌어요.' : `무한 배달 내 최고 기록 ${sb[3]}점`) : O.win ? (G.lv < 2 ? '다음 단계가 열렸어요!' : '🏆 3단계까지 모두 깼어요! 공전 택배 완료! 더 하고 싶은 사람은 🔥 무한 배달(선택)에 도전해 보세요.') : `${G.hits}번 성공. ${L.goal}번 이상 성공하면 다음 단계가 열려요.`;
     return top + `<section class="panel" style="max-width:720px;text-align:center"><h2 class="gq">${head}</h2><div class="gbig">${G.score}점</div><p class="lead">${msg}</p>
 <p class="lead">📦 성공 <b>${G.hits}</b> / 주문 ${tot}개 (성공률 ${G.rate}%) · ✨ PERFECT <b>${G.perfect}</b> · 🔥 최대 콤보 <b>${G.maxCombo}</b>${L.endless ? ` · ⏱ ${Math.floor(G.el)}초` : ''}</p>
-<p class="lead">내 최고 점수(1~3단계 최고의 합) <b>${g.best}점</b>${O.up ? ' 🎉 기록 갱신!' : ''}</p>${rankBox()}
+<p class="lead">내 최고 점수(단계별 최고의 합) <b>${g.best}점</b>${O.up ? ' 🎉 기록 갱신!' : ''}</p>${rankBox()}
 <div class="fb ex" style="text-align:left">💡 지구가 공전하면 태양이 별자리 사이를 서 → 동으로 옮겨 가요(태양의 연주 운동). 태양 쪽 별자리는 낮에 떠 있어서 보이지 않고, 그 반대쪽(6개월 차이)의 별자리가 한밤중 남쪽 하늘에 보여요.</div>
 <div class="row" style="justify-content:center;margin-top:12px">${O.win && G.lv < 3 ? `<button class="btn" data-act="gup">${G.lv < 2 ? '다음 단계 →' : '🔥 무한 배달 도전 (선택)'}</button>` : ''}<button class="btn${O.win ? ' ghost' : ''}" data-act="gagain">🔁 다시 하기</button><button class="btn ghost" data-act="gmenu">단계 고르기</button></div></section>`;
   }
@@ -1653,6 +1653,7 @@ app.addEventListener('click', async e => {
   else if (a === 'gmenu') { gStop(); G = { phase: 'menu' }; render(); }
   else if (a === 'teacher') { ui.teacher = null; state.view = 'teacher'; render(); }
   else if (a === 'tload') teacherLoad();
+  else if (a === 'tauto') { const T = ui.teacher; T.auto = !T.auto; clearInterval(ui.tTimer); if (T.auto) ui.tTimer = setInterval(() => { const X = ui.teacher; if (state.view === 'teacher' && X && X.auto && X.data) teacherLoad(true); else clearInterval(ui.tTimer); }, 30000); render(); }
   else if (a === 'tcls') { ui.teacher.cls = t.dataset.c; render(); }
   else if (a === 'submit') submit();
 });
